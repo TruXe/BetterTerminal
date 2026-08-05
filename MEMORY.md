@@ -540,10 +540,13 @@ live console - `VtParser` and `CellGrid` are the candidates, pure state machines
 `/md-sync` means re-running md-orchestrator in SYNC mode. *Next step:* install a real md-sync skill,
 or leave the command as the documented form. *Blocker:* the skill is not available on this machine.
 
-**3. Git is planned but not initialised.** *Stopped at:* git plus GitHub is intended and a
-`.gitignore` exists; there is no `.git` directory. *Next step:* `git init` and a first commit - by
-the user, or by an assistant **only when the user names the command in the same run**. *Blocker:* the
-standing prohibition on unrequested git writes, [RULES #git-rules](RULES.md#git-rules).
+**3. Git - DONE 2026-08-05.** The repository was initialised at the user's request and pushed to
+`https://github.com/TruXe/BetterTerminal`, a **private** repository whose own first commit (README
+and MIT licence) is the parent of the import. `.github/workflows/build.yml` rebuilds both
+configurations with `/warnaserror` on every push and, on a `v*` tag, zips the Release output and
+publishes it as a release using the token the run is given. *Open:* the `v1.0.0` run could not be
+watched from here - the repository is private, so the API needs a token, and reading the one in the
+credential store is blocked. Confirm the run and the release in the browser.
 
 **4. Archive index - DONE 2026-08-04.** `docs\_archive\2026-08-04\ARCHIVE-INDEX.md` now exists, with
 a claim-coverage table showing nothing was lost from the archived `RULES.md`. Kept as the record that

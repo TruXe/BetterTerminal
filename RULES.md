@@ -134,8 +134,10 @@ release and by `.claude/skills/md-orchestrator/scripts/validate_docs.py --strict
 
 ## Git rules
 
-The repository is **not initialised yet** - there is no `.git` directory. Git plus GitHub is planned,
-so these are written for that future and are all `[convention]`; nothing enforces them today.
+The repository was initialised on 2026-08-05 and pushed to
+`https://github.com/TruXe/BetterTerminal` (**private**), on top of the repository's own first
+commit. Default branch `main`, licence MIT. These remain `[convention]` - nothing but review
+enforces them.
 
 - **[convention] No assistant runs a git write operation unless the user asks for it by name in the
   same run.** Banned without a named request: `commit`, `push`, `merge`, `rebase`, `reset --hard`,

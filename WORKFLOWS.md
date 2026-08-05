@@ -238,6 +238,27 @@ There is **no installer, no code signing and no publish step yet**. A release is
 - Runs here but not on the target - the target lacks .NET Framework 4.8 or is 32-bit; x64 by design.
 - Only `BetterTerminal.exe` was copied - both class-library DLLs must travel with it; there is no merged or single-file output.
 
+### Publish a release
+
+**When:** shipping a build to the releases page · **Takes:** a few minutes of CI · **Needs:** a clean working tree on `main`, pushed
+
+The tag is what publishes. `.github/workflows/build.yml` rebuilds both configurations with
+`/warnaserror`, zips the Release output together with the README and the licence, and creates the
+release with that zip using the token the run is given - no token is stored anywhere in the
+repository.
+
+1. `git tag -a v1.2.3 -m "BetterTerminal 1.2.3"` - annotated, `v` prefix; the workflow only publishes for `refs/tags/v*`
+2. `git push origin v1.2.3` - this is what starts the run
+3. Watch the run on the repository's Actions tab; the release appears when it finishes
+
+**Verify:** the release lists `BetterTerminal-x64.zip`, and the zip holds `BetterTerminal.exe`,
+`beterm-banner.exe`, `beterm-wrap.exe`, the two DLLs, `README.md` and `LICENSE`.
+
+**If it fails:**
+- The run fails in a build step - a warning was introduced; the workflow enforces the same zero-warning rule as [Rebuild warning-clean](#testing).
+- The run is not listed at all - Actions is disabled for the repository, or the tag was pushed before the workflow file was on `main`.
+- You need the same zip locally: build Release, then copy `BetterTerminal.Shell\bin\x64\Release\*.exe` and `*.dll`, `BetterTerminal.Wrap\bin\x64\Release\beterm-wrap.exe`, `README.md` and `LICENSE` into one folder and `Compress-Archive` it. That is exactly what the workflow does.
+
 ## Debugging
 
 ### Capture the window without stealing focus
