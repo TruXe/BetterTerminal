@@ -1,0 +1,56 @@
+<Window x:Class="BetterTerminal.Shell.Views.SessionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        mc:Ignorable="d"
+        Title="Session"
+        Width="900" Height="560" MinWidth="420" MinHeight="260"
+        Background="{DynamicResource Bt.ChromeBackgroundBrush}"
+        Foreground="{DynamicResource Bt.TextFillPrimaryBrush}"
+        FontFamily="{DynamicResource Bt.Font.Ui}"
+        FontSize="{DynamicResource Bt.FontSize.Body}"
+        UseLayoutRounding="True">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="36" ResizeBorderThickness="6"
+                            CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Height="36" Background="{DynamicResource Bt.ChromeBackgroundBrush}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                <Control Style="{StaticResource Bt.BrandMark}" Width="14" Height="14"
+                         VerticalAlignment="Center"/>
+                <TextBlock x:Name="Caption" Margin="10,0,0,0" VerticalAlignment="Center"
+                           Style="{StaticResource Bt.Text.MonoSmall}" Text="Session"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                <Button Style="{StaticResource Bt.Button.Caption}" Height="36" Click="OnMinimize"
+                        AutomationProperties.Name="Minimize">
+                    <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE921;"/>
+                </Button>
+                <Button Style="{StaticResource Bt.Button.Caption}" Height="36" Click="OnToggleMaximize"
+                        AutomationProperties.Name="Maximize or restore">
+                    <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE922;"/>
+                </Button>
+                <Button Style="{StaticResource Bt.Button.CaptionClose}" Height="36" Click="OnClose"
+                        AutomationProperties.Name="Close this session">
+                    <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE8BB;"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Background="{DynamicResource Bt.TerminalBackgroundBrush}"
+                BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}" BorderThickness="0,1,0,0">
+            <ContentControl x:Name="Host" Margin="12,10,12,10"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+        </Border>
+    </Grid>
+</Window>

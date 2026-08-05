@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="Bt.Scheme.Name">One Half Dark</sys:String>
+    <Color x:Key="Bt.Scheme.Background">#FF282C34</Color>
+    <Color x:Key="Bt.Scheme.Foreground">#FFDCDFE4</Color>
+    <Color x:Key="Bt.Scheme.Cursor">#FFDCDFE4</Color>
+    <Color x:Key="Bt.Scheme.Selection">#FF474E5D</Color>
+    <Color x:Key="Bt.Scheme.Black">#FF282C34</Color>
+    <Color x:Key="Bt.Scheme.Red">#FFE06C75</Color>
+    <Color x:Key="Bt.Scheme.Green">#FF98C379</Color>
+    <Color x:Key="Bt.Scheme.Yellow">#FFE5C07B</Color>
+    <Color x:Key="Bt.Scheme.Blue">#FF61AFEF</Color>
+    <Color x:Key="Bt.Scheme.Magenta">#FFC678DD</Color>
+    <Color x:Key="Bt.Scheme.Cyan">#FF56B6C2</Color>
+    <Color x:Key="Bt.Scheme.White">#FFDCDFE4</Color>
+    <Color x:Key="Bt.Scheme.BrightBlack">#FF5A6374</Color>
+    <Color x:Key="Bt.Scheme.BrightRed">#FFE06C75</Color>
+    <Color x:Key="Bt.Scheme.BrightGreen">#FF98C379</Color>
+    <Color x:Key="Bt.Scheme.BrightYellow">#FFE5C07B</Color>
+    <Color x:Key="Bt.Scheme.BrightBlue">#FF61AFEF</Color>
+    <Color x:Key="Bt.Scheme.BrightMagenta">#FFC678DD</Color>
+    <Color x:Key="Bt.Scheme.BrightCyan">#FF56B6C2</Color>
+    <Color x:Key="Bt.Scheme.BrightWhite">#FFDCDFE4</Color>
+</ResourceDictionary>

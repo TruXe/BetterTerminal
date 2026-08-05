@@ -1,0 +1,25 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <sys:String x:Key="Bt.Scheme.Name">Solarized Dark</sys:String>
+    <Color x:Key="Bt.Scheme.Background">#FF002B36</Color>
+    <Color x:Key="Bt.Scheme.Foreground">#FF839496</Color>
+    <Color x:Key="Bt.Scheme.Cursor">#FF93A1A1</Color>
+    <Color x:Key="Bt.Scheme.Selection">#FF073642</Color>
+    <Color x:Key="Bt.Scheme.Black">#FF002B36</Color>
+    <Color x:Key="Bt.Scheme.Red">#FFDC322F</Color>
+    <Color x:Key="Bt.Scheme.Green">#FF859900</Color>
+    <Color x:Key="Bt.Scheme.Yellow">#FFB58900</Color>
+    <Color x:Key="Bt.Scheme.Blue">#FF268BD2</Color>
+    <Color x:Key="Bt.Scheme.Magenta">#FFD33682</Color>
+    <Color x:Key="Bt.Scheme.Cyan">#FF2AA198</Color>
+    <Color x:Key="Bt.Scheme.White">#FFEEE8D5</Color>
+    <Color x:Key="Bt.Scheme.BrightBlack">#FF073642</Color>
+    <Color x:Key="Bt.Scheme.BrightRed">#FFCB4B16</Color>
+    <Color x:Key="Bt.Scheme.BrightGreen">#FF586E75</Color>
+    <Color x:Key="Bt.Scheme.BrightYellow">#FF657B83</Color>
+    <Color x:Key="Bt.Scheme.BrightBlue">#FF839496</Color>
+    <Color x:Key="Bt.Scheme.BrightMagenta">#FF6C71C4</Color>
+    <Color x:Key="Bt.Scheme.BrightCyan">#FF93A1A1</Color>
+    <Color x:Key="Bt.Scheme.BrightWhite">#FFFDF6E3</Color>
+</ResourceDictionary>

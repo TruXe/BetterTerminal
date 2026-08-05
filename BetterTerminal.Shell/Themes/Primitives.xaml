@@ -1,0 +1,76 @@
+<!-- Tier 1 of 3 (DS-02): raw values only. Views must never reference these keys. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- Brand -->
+    <Color x:Key="Bt.Color.Accent">#FFE4A130</Color>
+    <Color x:Key="Bt.Color.AccentLight">#FFF0B24A</Color>
+    <Color x:Key="Bt.Color.AccentDark">#FFC6871F</Color>
+    <Color x:Key="Bt.Color.AccentDeep">#FF8A5504</Color>
+    <Color x:Key="Bt.Color.AccentInk">#FF17181A</Color>
+
+    <!-- Neutral ramp -->
+    <Color x:Key="Bt.Color.Neutral.1000">#FF0A0B0C</Color>
+    <Color x:Key="Bt.Color.Neutral.950">#FF0E0F11</Color>
+    <Color x:Key="Bt.Color.Neutral.900">#FF15171A</Color>
+    <Color x:Key="Bt.Color.Neutral.850">#FF1B1E22</Color>
+    <Color x:Key="Bt.Color.Neutral.800">#FF23272C</Color>
+    <Color x:Key="Bt.Color.Neutral.750">#FF31363C</Color>
+    <Color x:Key="Bt.Color.Neutral.700">#FF22252A</Color>
+    <Color x:Key="Bt.Color.Neutral.500">#FF6A7178</Color>
+    <Color x:Key="Bt.Color.Neutral.400">#FF9AA1A9</Color>
+    <Color x:Key="Bt.Color.Neutral.200">#FFCCD1D6</Color>
+    <Color x:Key="Bt.Color.Neutral.150">#FFE2E5E8</Color>
+    <Color x:Key="Bt.Color.Neutral.100">#FFECEEF0</Color>
+    <Color x:Key="Bt.Color.Neutral.50">#FFFBFBFC</Color>
+    <Color x:Key="Bt.Color.Neutral.25">#FFFCFCFB</Color>
+    <Color x:Key="Bt.Color.Neutral.0">#FFFFFFFF</Color>
+    <Color x:Key="Bt.Color.Ink">#FF191B1E</Color>
+    <Color x:Key="Bt.Color.InkSecondary">#FF565D65</Color>
+    <Color x:Key="Bt.Color.InkTertiary">#FF7F868E</Color>
+    <Color x:Key="Bt.Color.Foam">#FFE6E8EA</Color>
+
+    <!-- Status -->
+    <Color x:Key="Bt.Color.Success.Dark">#FF5CB683</Color>
+    <Color x:Key="Bt.Color.Success.Light">#FF1F7A4C</Color>
+    <Color x:Key="Bt.Color.Warning.Dark">#FFDDA43C</Color>
+    <Color x:Key="Bt.Color.Warning.Light">#FF8A5504</Color>
+    <Color x:Key="Bt.Color.Error.Dark">#FFE5696A</Color>
+    <Color x:Key="Bt.Color.Error.Light">#FFB02F2F</Color>
+    <Color x:Key="Bt.Color.CloseRed">#FFC42B1C</Color>
+
+    <!-- Overlay tints (state layers) -->
+    <Color x:Key="Bt.Color.Overlay.LightHover">#0EFFFFFF</Color>
+    <Color x:Key="Bt.Color.Overlay.LightPress">#06FFFFFF</Color>
+    <Color x:Key="Bt.Color.Overlay.DarkHover">#0B000000</Color>
+    <Color x:Key="Bt.Color.Overlay.DarkPress">#13000000</Color>
+    <Color x:Key="Bt.Color.Overlay.AccentWashDark">#21E4A130</Color>
+    <Color x:Key="Bt.Color.Overlay.AccentWashLight">#2EE4A130</Color>
+    <Color x:Key="Bt.Color.Scrim">#57000000</Color>
+
+    <!-- Geometry / metric scalars (DIPs). -->
+    <sys:Double x:Key="Bt.Size.TitleBarHeight">40</sys:Double>
+    <sys:Double x:Key="Bt.Size.TabHeight">34</sys:Double>
+    <sys:Double x:Key="Bt.Size.CommandBarHeight">38</sys:Double>
+    <sys:Double x:Key="Bt.Size.PaneHeaderHeight">28</sys:Double>
+    <sys:Double x:Key="Bt.Size.StatusBarHeight">26</sys:Double>
+    <sys:Double x:Key="Bt.Size.ControlHeight">30</sys:Double>
+    <sys:Double x:Key="Bt.Size.ControlHeightCompact">26</sys:Double>
+    <sys:Double x:Key="Bt.Size.WindowButtonWidth">46</sys:Double>
+    <sys:Double x:Key="Bt.Size.IconSmall">14</sys:Double>
+    <sys:Double x:Key="Bt.Size.IconMedium">16</sys:Double>
+    <sys:Double x:Key="Bt.Size.SplitterThickness">6</sys:Double>
+
+    <CornerRadius x:Key="Bt.Radius.Control">5</CornerRadius>
+    <CornerRadius x:Key="Bt.Radius.Card">7</CornerRadius>
+    <CornerRadius x:Key="Bt.Radius.Pane">6</CornerRadius>
+    <CornerRadius x:Key="Bt.Radius.TabTop">6,6,0,0</CornerRadius>
+    <CornerRadius x:Key="Bt.Radius.Badge">3</CornerRadius>
+
+    <Thickness x:Key="Bt.Space.PaneGutter">8</Thickness>
+    <Thickness x:Key="Bt.Space.ContentPad">26,22,30,22</Thickness>
+    <Thickness x:Key="Bt.Space.ControlPad">10,0,10,0</Thickness>
+    <Thickness x:Key="Bt.Space.ButtonPad">14,0,14,0</Thickness>
+    <Thickness x:Key="Bt.Space.RowPad">12,0,12,0</Thickness>
+</ResourceDictionary>

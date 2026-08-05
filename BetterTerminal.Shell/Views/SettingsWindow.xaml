@@ -1,0 +1,579 @@
+<Window x:Class="BetterTerminal.Shell.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:vm="clr-namespace:BetterTerminal.Shell.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel, IsDesignTimeCreatable=True}"
+        Title="Settings"
+        Width="1040" Height="700" MinWidth="720" MinHeight="480"
+        Background="{DynamicResource Bt.ChromeBackgroundBrush}"
+        Foreground="{DynamicResource Bt.TextFillPrimaryBrush}"
+        FontFamily="{DynamicResource Bt.Font.Ui}"
+        FontSize="{DynamicResource Bt.FontSize.Body}"
+        UseLayoutRounding="True">
+
+    <Window.Resources>
+        <!-- One page is visible at a time, chosen by the navigation list. A Visibility trigger
+             keeps every page's bindings rooted at the window DataContext. -->
+        <Style x:Key="Bt.SettingsPage" TargetType="FrameworkElement">
+            <Setter Property="Visibility" Value="Collapsed"/>
+        </Style>
+    </Window.Resources>
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="38" ResizeBorderThickness="6"
+                            CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Height="38">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <Control Grid.Column="0" Style="{StaticResource Bt.BrandMark}" Width="15" Height="15"
+                     Margin="12,0,10,0" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                       Style="{StaticResource Bt.Text.BodyStrong}"
+                       Foreground="{DynamicResource Bt.TextFillSecondaryBrush}" Text="Settings"/>
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Style="{StaticResource Bt.Button.Caption}" Width="44" Height="38"
+                        Click="OnMinimize" AutomationProperties.Name="Minimize">
+                    <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE921;"/>
+                </Button>
+                <Button Style="{StaticResource Bt.Button.Caption}" Width="44" Height="38"
+                        Click="OnToggleMaximize" AutomationProperties.Name="Maximize or restore">
+                    <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE922;"/>
+                </Button>
+                <Button Style="{StaticResource Bt.Button.CaptionClose}" Width="44" Height="38"
+                        Click="OnClose" AutomationProperties.Name="Close settings">
+                    <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE8BB;"/>
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="216"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ===== navigation ===== -->
+            <Border Grid.Column="0" BorderThickness="0,1,1,0"
+                    BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <ListBox Grid.Row="0" Margin="8,12,8,0"
+                             Style="{StaticResource Bt.ListBox.Plain}"
+                             ItemContainerStyle="{StaticResource Bt.NavItem}"
+                             ItemsSource="{Binding Pages}"
+                             SelectedItem="{Binding SelectedPage, Mode=TwoWay}"
+                             AutomationProperties.Name="Settings sections">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:SettingsPageViewModel}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource Bt.Text.Icon}"
+                                               VerticalAlignment="Center" Text="{Binding Glyph}"/>
+                                    <TextBlock Margin="10,0,0,0" VerticalAlignment="Center"
+                                               Style="{StaticResource Bt.Text.Body}" Text="{Binding Title}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Button Grid.Row="1" Margin="8,10,8,10" HorizontalContentAlignment="Left"
+                            Style="{StaticResource Bt.Button.Chrome}"
+                            Command="{Binding OpenSettingsFileCommand}"
+                            AutomationProperties.Name="Open the workspace file">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="13" Text="&#xE8E5;"/>
+                            <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" Text="Open workspace file"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- ===== Appearance page ===== -->
+            <Border Grid.Column="1" Background="{DynamicResource Bt.SurfaceBackgroundBrush}"
+                    BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}">
+                <Grid>
+                <Grid Margin="{DynamicResource Bt.Space.ContentPad}">
+                    <Grid.Style>
+                        <Style TargetType="Grid" BasedOn="{StaticResource Bt.SettingsPage}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedPage.Title}" Value="Appearance">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>   <!-- heading -->
+                        <RowDefinition Height="Auto"/>   <!-- theme cards -->
+                        <RowDefinition Height="*"/>      <!-- scheme + preview -->
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Style="{StaticResource Bt.Text.Subtitle}" FontSize="17" Text="Appearance"/>
+                        <TextBlock Margin="0,6,0,0" MaxWidth="620" Style="{StaticResource Bt.Text.Paragraph}"
+                                   Text="Application theme controls the window chrome. The colour scheme controls what the shell draws inside a pane."/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,26,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Bt.Text.BodyStrong}" Text="Application theme"/>
+                            <TextBlock Margin="10,0,0,0" VerticalAlignment="Center"
+                                       Style="{StaticResource Bt.Text.Caption}" Text="restart not required"/>
+                        </StackPanel>
+
+                        <!-- Shared size keeps the three cards' footers aligned (BP-R8). -->
+                        <StackPanel Orientation="Horizontal" Margin="0,12,0,0"
+                                    Grid.IsSharedSizeScope="True">
+                            <RadioButton Style="{StaticResource Bt.ThemeCard}" GroupName="AppTheme"
+                                         IsChecked="{Binding IsDarkSelected, Mode=TwoWay}"
+                                         AutomationProperties.Name="Dark theme, the default">
+                                <StackPanel>
+                                    <!-- Colour tokens are Colors, not Brushes: wrapping is required. -->
+                                    <Border Height="78" CornerRadius="6,6,0,0">
+                                        <Border.Background>
+                                            <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.950}"/>
+                                        </Border.Background>
+                                    </Border>
+                                    <Border BorderThickness="0,1,0,0"
+                                            BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}" Padding="11,9,11,9">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource Bt.Text.BodyStrong}" Text="Dark"/>
+                                            <Border Margin="8,0,0,0" Style="{StaticResource Bt.Badge}">
+                                                <TextBlock Style="{StaticResource Bt.Text.Caption}"
+                                                           Foreground="{DynamicResource Bt.AccentTextBrush}"
+                                                           Text="Default"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
+                            </RadioButton>
+
+                            <RadioButton Margin="12,0,0,0" Style="{StaticResource Bt.ThemeCard}" GroupName="AppTheme"
+                                         IsChecked="{Binding IsLightSelected, Mode=TwoWay}"
+                                         AutomationProperties.Name="Light theme">
+                                <StackPanel>
+                                    <Border Height="78" CornerRadius="6,6,0,0">
+                                        <Border.Background>
+                                            <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.100}"/>
+                                        </Border.Background>
+                                    </Border>
+                                    <Border BorderThickness="0,1,0,0"
+                                            BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}" Padding="11,9,11,9">
+                                        <TextBlock Style="{StaticResource Bt.Text.Body}" Text="Light"/>
+                                    </Border>
+                                </StackPanel>
+                            </RadioButton>
+
+                            <RadioButton Margin="12,0,0,0" Style="{StaticResource Bt.ThemeCard}" GroupName="AppTheme"
+                                         IsChecked="{Binding IsFollowSystemSelected, Mode=TwoWay}"
+                                         AutomationProperties.Name="Follow the Windows app theme">
+                                <StackPanel>
+                                    <Grid Height="78">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Border Grid.Column="0" CornerRadius="6,0,0,0">
+                                            <Border.Background>
+                                                <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.950}"/>
+                                            </Border.Background>
+                                        </Border>
+                                        <Border Grid.Column="1" CornerRadius="0,6,0,0">
+                                            <Border.Background>
+                                                <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.100}"/>
+                                            </Border.Background>
+                                        </Border>
+                                    </Grid>
+                                    <Border BorderThickness="0,1,0,0"
+                                            BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}" Padding="11,9,11,9">
+                                        <TextBlock Style="{StaticResource Bt.Text.Body}" Text="Follow Windows"/>
+                                    </Border>
+                                </StackPanel>
+                            </RadioButton>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Grid Grid.Row="2" Margin="0,26,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="300"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Bt.Text.BodyStrong}"
+                                   Text="Terminal colour scheme"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Margin="20,0,0,0"
+                                   Style="{StaticResource Bt.Text.BodyStrong}" Text="Preview"/>
+
+                        <Border Grid.Row="1" Grid.Column="0" Margin="0,10,0,0"
+                                Style="{StaticResource Bt.Card}"
+                                Background="{DynamicResource Bt.ElevatedBackgroundBrush}">
+                            <ListBox Style="{StaticResource Bt.ListBox.Plain}"
+                                     ItemsSource="{Binding Schemes}"
+                                     SelectedItem="{Binding SelectedScheme, Mode=TwoWay}"
+                                     AutomationProperties.Name="Terminal colour schemes">
+                                <ListBox.ItemContainerStyle>
+                                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource Bt.RowItem}">
+                                        <Setter Property="Height" Value="42"/>
+                                        <Setter Property="Padding" Value="12,0,12,0"/>
+                                    </Style>
+                                </ListBox.ItemContainerStyle>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type vm:SchemeViewModel}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                                       Style="{StaticResource Bt.Text.BodyStrong}"
+                                                       Text="{Binding Name}"/>
+                                            <ItemsControl Grid.Column="1" ItemsSource="{Binding Swatches}"
+                                                          VerticalAlignment="Center">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Rectangle Width="13" Height="15" Fill="{Binding}"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
+
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="20,10,0,0">
+                            <Border Style="{StaticResource Bt.Card}"
+                                    Background="{Binding SelectedScheme.BackgroundBrush}">
+                                <TextBlock Margin="12,10,12,10" TextTrimming="None"
+                                           FontFamily="{DynamicResource Bt.Font.Mono}"
+                                           FontSize="{DynamicResource Bt.FontSize.MonoSmall}"
+                                           Foreground="{Binding SelectedScheme.ForegroundBrush}"
+                                           Text="{Binding SelectedScheme.PreviewText}"/>
+                            </Border>
+
+                            <Grid Margin="0,16,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Label Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"
+                                       Target="{Binding ElementName=FontPicker}"
+                                       Foreground="{DynamicResource Bt.TextFillSecondaryBrush}"
+                                       Content="_Font"/>
+                                <ComboBox Grid.Row="0" Grid.Column="1" x:Name="FontPicker" MinWidth="150"
+                                          Style="{StaticResource Bt.ComboBox}"
+                                          ItemsSource="{Binding MonoFonts}"
+                                          SelectedItem="{Binding SelectedFont, Mode=TwoWay}"/>
+
+                                <Label Grid.Row="1" Grid.Column="0" Margin="0,12,0,0" VerticalAlignment="Center"
+                                       Target="{Binding ElementName=FontSizeBox}"
+                                       Foreground="{DynamicResource Bt.TextFillSecondaryBrush}"
+                                       Content="_Size"/>
+                                <!-- Committed when the box is left or Enter is pressed, never per
+                                     keystroke: the value is clamped to 8-36, so typing "12" would
+                                     otherwise be read as "1" and snapped before the 2 arrived. -->
+                                <TextBox Grid.Row="1" Grid.Column="1" x:Name="FontSizeBox" Margin="0,12,0,0"
+                                         Width="120" HorizontalContentAlignment="Center"
+                                         Style="{StaticResource Bt.TextBox.Mono}"
+                                         Text="{Binding FontSize, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                         PreviewKeyDown="OnFontSizeKeyDown"
+                                         AutomationProperties.Name="Terminal font size in points"/>
+
+                                <Label Grid.Row="2" Grid.Column="0" Margin="0,12,0,0" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource Bt.TextFillSecondaryBrush}"
+                                       Content="Cursor"/>
+                                <Border Grid.Row="2" Grid.Column="1" Margin="0,12,0,0"
+                                        BorderBrush="{DynamicResource Bt.StrokeDefaultBrush}"
+                                        BorderThickness="1" CornerRadius="{DynamicResource Bt.Radius.Control}"
+                                        HorizontalAlignment="Right">
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Style="{StaticResource Bt.Segment}" GroupName="CursorShape"
+                                                     IsChecked="{Binding IsCursorBar, Mode=TwoWay}" Content="Bar"/>
+                                        <RadioButton Style="{StaticResource Bt.Segment}" GroupName="CursorShape"
+                                                     IsChecked="{Binding IsCursorBlock, Mode=TwoWay}" Content="Block"/>
+                                        <RadioButton Style="{StaticResource Bt.Segment}" GroupName="CursorShape"
+                                                     IsChecked="{Binding IsCursorUnderline, Mode=TwoWay}" Content="Underline"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Label Grid.Row="3" Grid.Column="0" Margin="0,14,0,0" VerticalAlignment="Center"
+                                       Target="{Binding ElementName=BlinkToggle}"
+                                       Foreground="{DynamicResource Bt.TextFillSecondaryBrush}"
+                                       Content="_Blink cursor"/>
+                                <ToggleButton Grid.Row="3" Grid.Column="1" x:Name="BlinkToggle" Margin="0,14,0,0"
+                                              HorizontalAlignment="Right"
+                                              Style="{StaticResource Bt.ToggleSwitch}"
+                                              IsChecked="{Binding BlinkCursor, Mode=TwoWay}"
+                                              AutomationProperties.Name="Blink the terminal cursor"/>
+                            </Grid>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+
+                <!-- ===== Profiles page ===== -->
+                <Grid Margin="{DynamicResource Bt.Space.ContentPad}">
+                    <Grid.Style>
+                        <Style TargetType="Grid" BasedOn="{StaticResource Bt.SettingsPage}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedPage.Title}" Value="Profiles">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Style="{StaticResource Bt.Text.Subtitle}" FontSize="17" Text="Profiles"/>
+                        <TextBlock Margin="0,6,0,0" MaxWidth="620" Style="{StaticResource Bt.Text.Paragraph}"
+                                   Text="The shells this build can launch. The command bar picker decides which one a new tab starts."/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Margin="0,18,0,0" Style="{StaticResource Bt.Card}"
+                            Background="{DynamicResource Bt.ElevatedBackgroundBrush}">
+                        <ListBox Style="{StaticResource Bt.ListBox.Plain}"
+                                 ItemsSource="{Binding Profiles}"
+                                 AutomationProperties.Name="Available profiles">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource Bt.RowItem}">
+                                    <Setter Property="Height" Value="58"/>
+                                    <Setter Property="Padding" Value="12,0,12,0"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ProfileViewModel}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                            <TextBlock Style="{StaticResource Bt.Text.BodyStrong}" Text="{Binding Name}"/>
+                                            <TextBlock Margin="0,3,0,0" Style="{StaticResource Bt.Text.MonoSmall}"
+                                                       Text="{Binding CommandLine}" ToolTip="{Binding CommandLine}"/>
+                                        </StackPanel>
+                                        <Border Grid.Column="1" Style="{StaticResource Bt.Badge.Outline}" Margin="12,0,0,0">
+                                            <TextBlock Style="{StaticResource Bt.Text.Caption}" Text="{Binding Source}"/>
+                                        </Border>
+                                        <TextBlock Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center"
+                                                   Style="{StaticResource Bt.Text.MonoSmall}"
+                                                   Text="{Binding ScrollbackLines, StringFormat={}{0} lines}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Grid>
+
+                <!-- ===== Keyboard page ===== -->
+                <Grid Margin="{DynamicResource Bt.Space.ContentPad}">
+                    <Grid.Style>
+                        <Style TargetType="Grid" BasedOn="{StaticResource Bt.SettingsPage}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedPage.Title}" Value="Keyboard">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Style="{StaticResource Bt.Text.Subtitle}" FontSize="17" Text="Keyboard"/>
+                        <TextBlock Margin="0,6,0,0" MaxWidth="620" Style="{StaticResource Bt.Text.Paragraph}"
+                                   Text="Every binding this build installs. Window bindings reach the shell; terminal bindings are handled inside the focused pane before the shell sees them."/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Margin="0,18,0,0" Style="{StaticResource Bt.Card}"
+                            Background="{DynamicResource Bt.ElevatedBackgroundBrush}">
+                        <ListBox Style="{StaticResource Bt.ListBox.Plain}"
+                                 ItemsSource="{Binding Shortcuts}"
+                                 AutomationProperties.Name="Key bindings">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem" BasedOn="{StaticResource Bt.RowItem}">
+                                    <Setter Property="Height" Value="38"/>
+                                    <Setter Property="Padding" Value="12,0,12,0"/>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:ShortcutViewModel}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                                   Style="{StaticResource Bt.Text.Body}" Text="{Binding Action}"/>
+                                        <TextBlock Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center"
+                                                   Style="{StaticResource Bt.Text.Caption}" Text="{Binding Source}"/>
+                                        <Border Grid.Column="2" MinWidth="150" Style="{StaticResource Bt.Badge.Outline}">
+                                            <TextBlock HorizontalAlignment="Center"
+                                                       Style="{StaticResource Bt.Text.MonoSmall}" Text="{Binding Keys}"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Grid>
+
+                <!-- ===== Panes and tabs page ===== -->
+                <Grid Margin="{DynamicResource Bt.Space.ContentPad}">
+                    <Grid.Style>
+                        <Style TargetType="Grid" BasedOn="{StaticResource Bt.SettingsPage}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedPage.Title}" Value="Panes and tabs">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Style="{StaticResource Bt.Text.Subtitle}" FontSize="17" Text="Panes and tabs"/>
+                        <TextBlock Margin="0,6,0,0" MaxWidth="620" Style="{StaticResource Bt.Text.Paragraph}"
+                                   Text="A new pane always starts in the working directory of the pane it was split from. Which shell it starts is the choice below."/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="1" Margin="0,22,0,0">
+                        <TextBlock Style="{StaticResource Bt.Text.BodyStrong}" Text="A split starts"/>
+                        <Border Margin="0,10,0,0" HorizontalAlignment="Left"
+                                BorderBrush="{DynamicResource Bt.StrokeDefaultBrush}"
+                                BorderThickness="1" CornerRadius="{DynamicResource Bt.Radius.Control}">
+                            <StackPanel Orientation="Horizontal">
+                                <RadioButton Style="{StaticResource Bt.Segment}" GroupName="SplitProfile"
+                                             IsChecked="{Binding SplitUsesSelectedProfile, Mode=TwoWay}"
+                                             Content="The profile picked in the command bar"/>
+                                <RadioButton Style="{StaticResource Bt.Segment}" GroupName="SplitProfile"
+                                             IsChecked="{Binding SplitUsesActiveProfile, Mode=TwoWay}"
+                                             Content="The same profile as the pane being split"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Margin="0,10,0,0" MaxWidth="620" Style="{StaticResource Bt.Text.Paragraph}"
+                                   Text="Scroll-back is fixed at 5000 lines per session in this build."/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- ===== About page ===== -->
+                <Grid Margin="{DynamicResource Bt.Space.ContentPad}">
+                    <Grid.Style>
+                        <Style TargetType="Grid" BasedOn="{StaticResource Bt.SettingsPage}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedPage.Title}" Value="About">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal">
+                        <Control Style="{StaticResource Bt.BrandMark}" Width="46" Height="46"/>
+                        <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Style="{StaticResource Bt.Text.Subtitle}" FontSize="18"
+                                       FontFamily="{DynamicResource Bt.Font.Display}" Text="BetterTerminal"/>
+                            <TextBlock Margin="0,5,0,0" Style="{StaticResource Bt.Text.MonoSmall}"
+                                       Text="{Binding About.VersionLine}"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Grid Grid.Row="1" Margin="0,22,0,0" HorizontalAlignment="Left">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource Bt.Text.Caption}" Text="Runtime"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" Margin="18,0,0,0"
+                                   Style="{StaticResource Bt.Text.MonoSmall}"
+                                   Foreground="{DynamicResource Bt.TextFillPrimaryBrush}"
+                                   Text="{Binding About.Runtime}"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,8,0,0"
+                                   Style="{StaticResource Bt.Text.Caption}" Text="Backend"/>
+                        <TextBlock Grid.Row="1" Grid.Column="1" Margin="18,8,0,0"
+                                   Style="{StaticResource Bt.Text.MonoSmall}"
+                                   Foreground="{DynamicResource Bt.TextFillPrimaryBrush}"
+                                   Text="{Binding About.Backend}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Margin="0,8,0,0"
+                                   Style="{StaticResource Bt.Text.Caption}" Text="Host"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" Margin="18,8,0,0"
+                                   Style="{StaticResource Bt.Text.MonoSmall}"
+                                   Foreground="{DynamicResource Bt.TextFillPrimaryBrush}"
+                                   Text="{Binding About.HostOs}"/>
+                        <TextBlock Grid.Row="3" Grid.Column="0" Margin="0,8,0,0"
+                                   Style="{StaticResource Bt.Text.Caption}" Text="Workspace"/>
+                        <TextBlock Grid.Row="3" Grid.Column="1" Margin="18,8,0,0"
+                                   Style="{StaticResource Bt.Text.MonoSmall}"
+                                   Foreground="{DynamicResource Bt.TextFillPrimaryBrush}"
+                                   Text="{Binding About.SettingsPath}"/>
+                    </Grid>
+
+                    <StackPanel Grid.Row="2" Margin="0,22,0,0" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button Style="{StaticResource Bt.Button.Secondary}" Height="28"
+                                Command="{Binding About.CopyDetailsCommand}" Content="Copy details"
+                                AutomationProperties.Name="Copy these details to the clipboard"/>
+                        <Button Style="{StaticResource Bt.Button.Chrome}" Margin="12,0,0,0"
+                                Command="{Binding About.OpenNoticesCommand}"
+                                Foreground="{DynamicResource Bt.AccentTextBrush}" Content="Open workspace folder"/>
+                    </StackPanel>
+                </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

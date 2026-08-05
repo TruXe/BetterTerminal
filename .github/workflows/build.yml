@@ -1,0 +1,58 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Add MSBuild to the path
+        uses: microsoft/setup-msbuild@v2
+
+      # Both configurations, because the pass condition for this repository is a clean rebuild of
+      # each. There is no restore step: the projects are classic csproj with no package reference.
+      - name: Build Debug
+        run: msbuild BetterTerminal.sln /t:Rebuild /p:Configuration=Debug /p:Platform=x64 /v:minimal /warnaserror
+
+      - name: Build Release
+        run: msbuild BetterTerminal.sln /t:Rebuild /p:Configuration=Release /p:Platform=x64 /v:minimal /warnaserror
+
+      - name: Collect the release files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory dist | Out-Null
+          Copy-Item BetterTerminal.Shell\bin\x64\Release\*.exe dist
+          Copy-Item BetterTerminal.Shell\bin\x64\Release\*.dll dist
+          Copy-Item BetterTerminal.Wrap\bin\x64\Release\beterm-wrap.exe dist
+          Copy-Item README.md, LICENSE dist
+          Compress-Archive -Path dist\* -DestinationPath BetterTerminal-x64.zip
+          Get-ChildItem dist | Select-Object Name, Length
+
+      - name: Keep the build as an artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BetterTerminal-x64
+          path: BetterTerminal-x64.zip
+
+      # A tag is what publishes. The token is the one the run is given; nothing is stored here.
+      - name: Publish the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME BetterTerminal-x64.zip `
+            --title $env:GITHUB_REF_NAME `
+            --notes "Unpack anywhere and run BetterTerminal.exe. The first run installs a copy under %LOCALAPPDATA%\BetterTerminal and registers the beterm command; open a new prompt afterwards. Needs 64-bit Windows and .NET Framework 4.8."

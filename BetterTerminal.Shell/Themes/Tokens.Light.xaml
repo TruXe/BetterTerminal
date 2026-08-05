@@ -1,0 +1,50 @@
+<!-- Tier 2 (DS-02): semantic brushes. Light.
+     Every key here exists with the same name in every sibling Tokens.*.xaml (DS-04 parity). -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Primitives.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
+    <sys:String x:Key="Bt.Theme.Id">Light</sys:String>
+
+    <SolidColorBrush x:Key="Bt.WindowBackgroundBrush" Color="{StaticResource Bt.Color.Neutral.100}"/>
+    <SolidColorBrush x:Key="Bt.ChromeBackgroundBrush" Color="{StaticResource Bt.Color.Neutral.50}"/>
+    <SolidColorBrush x:Key="Bt.SurfaceBackgroundBrush" Color="{StaticResource Bt.Color.Neutral.0}"/>
+    <SolidColorBrush x:Key="Bt.ElevatedBackgroundBrush" Color="{StaticResource Bt.Color.Neutral.0}"/>
+    <SolidColorBrush x:Key="Bt.TerminalBackgroundBrush" Color="{StaticResource Bt.Color.Neutral.25}"/>
+    <SolidColorBrush x:Key="Bt.ScrimBrush" Color="{StaticResource Bt.Color.Scrim}"/>
+
+    <SolidColorBrush x:Key="Bt.StrokeSubtleBrush" Color="{StaticResource Bt.Color.Neutral.150}"/>
+    <SolidColorBrush x:Key="Bt.StrokeDefaultBrush" Color="{StaticResource Bt.Color.Neutral.200}"/>
+
+    <SolidColorBrush x:Key="Bt.TextFillPrimaryBrush" Color="{StaticResource Bt.Color.Ink}"/>
+    <SolidColorBrush x:Key="Bt.TextFillSecondaryBrush" Color="{StaticResource Bt.Color.InkSecondary}"/>
+    <SolidColorBrush x:Key="Bt.TextFillTertiaryBrush" Color="{StaticResource Bt.Color.InkTertiary}"/>
+    <SolidColorBrush x:Key="Bt.TextFillDisabledBrush" Color="{StaticResource Bt.Color.InkTertiary}"/>
+
+    <!-- Fill keeps brand amber for identity; text/icon use switches to the deep tint for AA (DS-17). -->
+    <SolidColorBrush x:Key="Bt.AccentFillDefaultBrush" Color="{StaticResource Bt.Color.Accent}"/>
+    <SolidColorBrush x:Key="Bt.AccentFillPointerOverBrush" Color="{StaticResource Bt.Color.AccentLight}"/>
+    <SolidColorBrush x:Key="Bt.AccentFillPressedBrush" Color="{StaticResource Bt.Color.AccentDark}"/>
+    <SolidColorBrush x:Key="Bt.AccentFillDisabledBrush" Color="{StaticResource Bt.Color.Neutral.150}"/>
+    <SolidColorBrush x:Key="Bt.AccentTextBrush" Color="{StaticResource Bt.Color.AccentDeep}"/>
+    <SolidColorBrush x:Key="Bt.AccentInkBrush" Color="{StaticResource Bt.Color.AccentInk}"/>
+    <SolidColorBrush x:Key="Bt.AccentWashBrush" Color="{StaticResource Bt.Color.Overlay.AccentWashLight}"/>
+
+    <SolidColorBrush x:Key="Bt.ControlFillDefaultBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="Bt.ControlFillPointerOverBrush" Color="{StaticResource Bt.Color.Overlay.DarkHover}"/>
+    <SolidColorBrush x:Key="Bt.ControlFillPressedBrush" Color="{StaticResource Bt.Color.Overlay.DarkPress}"/>
+    <SolidColorBrush x:Key="Bt.ControlFillDisabledBrush" Color="Transparent"/>
+    <SolidColorBrush x:Key="Bt.ControlFillInputBrush" Color="{StaticResource Bt.Color.Neutral.0}"/>
+
+    <SolidColorBrush x:Key="Bt.StatusSuccessBrush" Color="{StaticResource Bt.Color.Success.Light}"/>
+    <SolidColorBrush x:Key="Bt.StatusWarningBrush" Color="{StaticResource Bt.Color.Warning.Light}"/>
+    <SolidColorBrush x:Key="Bt.StatusErrorBrush" Color="{StaticResource Bt.Color.Error.Light}"/>
+    <SolidColorBrush x:Key="Bt.CloseButtonPointerOverBrush" Color="{StaticResource Bt.Color.CloseRed}"/>
+    <SolidColorBrush x:Key="Bt.CloseButtonForegroundPointerOverBrush" Color="{StaticResource Bt.Color.Neutral.0}"/>
+
+    <SolidColorBrush x:Key="Bt.FocusStrokeOuterBrush" Color="{StaticResource Bt.Color.Ink}"/>
+    <SolidColorBrush x:Key="Bt.FocusStrokeInnerBrush" Color="{StaticResource Bt.Color.Neutral.0}"/>
+</ResourceDictionary>

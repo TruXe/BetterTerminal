@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
+    <ProjectGuid>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40002}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BetterTerminal.Terminal</RootNamespace>
+    <AssemblyName>BetterTerminal.Terminal</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <LangVersion>7.3</LangVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
+    <PlatformTarget>x64</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CaretShape.cs" />
+    <Compile Include="CellFlags.cs" />
+    <Compile Include="CellGrid.cs" />
+    <Compile Include="ConPtySession.cs" />
+    <Compile Include="ConsoleHwndHost.cs" />
+    <Compile Include="HwndConsoleSession.cs" />
+    <Compile Include="ITerminalSession.cs" />
+    <Compile Include="ProcessJob.cs" />
+    <Compile Include="ShellProfile.cs" />
+    <Compile Include="TerminalBackend.cs" />
+    <Compile Include="TerminalCell.cs" />
+    <Compile Include="TerminalExitEventArgs.cs" />
+    <Compile Include="TerminalOutputEventArgs.cs" />
+    <Compile Include="TerminalPalette.cs" />
+    <Compile Include="TerminalRenderer.cs" />
+    <Compile Include="TerminalSessionFactory.cs" />
+    <Compile Include="TerminalTitleEventArgs.cs" />
+    <Compile Include="VtKeyEncoder.cs" />
+    <Compile Include="VtParser.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BetterTerminal.Interop\BetterTerminal.Interop.csproj">
+      <Project>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40001}</Project>
+      <Name>BetterTerminal.Interop</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

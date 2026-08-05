@@ -1,0 +1,205 @@
+<Window x:Class="BetterTerminal.Shell.Views.WorkspaceSetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:vm="clr-namespace:BetterTerminal.Shell.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:WorkspaceSetupViewModel, IsDesignTimeCreatable=True}"
+        Title="Workspace setup"
+        Width="640" Height="640" MinWidth="520" MinHeight="420"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource Bt.SurfaceBackgroundBrush}"
+        Foreground="{DynamicResource Bt.TextFillPrimaryBrush}"
+        FontFamily="{DynamicResource Bt.Font.Ui}"
+        FontSize="{DynamicResource Bt.FontSize.Body}">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="36" ResizeBorderThickness="6"
+                            CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Height="36" Background="{DynamicResource Bt.ChromeBackgroundBrush}">
+            <TextBlock Margin="14,0,0,0" VerticalAlignment="Center"
+                       Style="{StaticResource Bt.Text.BodyStrong}"
+                       Foreground="{DynamicResource Bt.TextFillSecondaryBrush}"
+                       Text="Workspace setup"/>
+            <Button HorizontalAlignment="Right" Width="40" Height="36"
+                    Style="{StaticResource Bt.Button.CaptionClose}"
+                    Click="OnCancel" AutomationProperties.Name="Close without saving">
+                <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE8BB;"/>
+            </Button>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,20,24,20">
+            <StackPanel>
+                <!-- ===== the project itself ===== -->
+                <TextBlock Style="{StaticResource Bt.Text.Overline}" Text="Project"/>
+                <TextBlock Margin="0,8,0,0" Style="{StaticResource Bt.Text.MonoSmall}"
+                           TextWrapping="Wrap" TextTrimming="None"
+                           Text="{Binding Directory}"/>
+
+                <TextBlock Margin="0,16,0,6" Style="{StaticResource Bt.Text.Caption}" Text="Name"/>
+                <TextBox Style="{StaticResource Bt.TextBox}" Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="Project name"/>
+
+                <TextBlock Margin="0,14,0,6" Style="{StaticResource Bt.Text.Caption}" Text="Shell for this project"/>
+                <ComboBox Style="{StaticResource Bt.ComboBox}" ItemsSource="{Binding Shells}"
+                          SelectedItem="{Binding SelectedShell, Mode=TwoWay}"
+                          HorizontalAlignment="Left" MinWidth="240"
+                          AutomationProperties.Name="Shell for this project">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Style="{StaticResource Bt.Text.Body}" Text="{Binding}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
+                <TextBlock Margin="0,14,0,6" Style="{StaticResource Bt.Text.Caption}"
+                           Text="Line to run when the project opens"/>
+                <TextBox Style="{StaticResource Bt.TextBox.Mono}"
+                         Text="{Binding StartupCommand, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="Line to run when the project opens"/>
+
+                <Grid Margin="0,16,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <ToggleButton Grid.Column="0" Style="{StaticResource Bt.ToggleSwitch}"
+                                  IsChecked="{Binding ShowSetupOnOpen, Mode=TwoWay}"
+                                  VerticalAlignment="Center"
+                                  AutomationProperties.Name="Show this setup every time the project opens"/>
+                    <TextBlock Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center"
+                               Style="{StaticResource Bt.Text.Body}"
+                               Text="Show this setup every time the project opens"/>
+                </Grid>
+
+                <Rectangle Height="1" Margin="0,20,0,20" Fill="{DynamicResource Bt.StrokeSubtleBrush}"/>
+
+                <!-- ===== commands the user defines ===== -->
+                <TextBlock Style="{StaticResource Bt.Text.Overline}" Text="Commands"/>
+                <TextBlock Margin="0,6,0,0" Style="{StaticResource Bt.Text.Caption}" TextWrapping="Wrap"
+                           Text="Each one appears in the command palette and runs in the focused session."/>
+
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="160"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Style="{StaticResource Bt.TextBox}"
+                             Text="{Binding NewCommandName, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Name of the new command"/>
+                    <TextBox Grid.Column="1" Margin="8,0,8,0" Style="{StaticResource Bt.TextBox.Mono}"
+                             Text="{Binding NewCommandText, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Line the new command runs"/>
+                    <Button Grid.Column="2" Style="{StaticResource Bt.Button.Secondary}"
+                            Command="{Binding AddCommandCommand}" Content="Add"
+                            AutomationProperties.Name="Add this command to the project"/>
+                </Grid>
+
+                <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Commands}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:CommandEntryViewModel}">
+                            <Grid Height="34">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                           Style="{StaticResource Bt.Text.Body}" Text="{Binding Name}"/>
+                                <TextBlock Grid.Column="1" Margin="8,0,8,0" VerticalAlignment="Center"
+                                           Style="{StaticResource Bt.Text.MonoSmall}"
+                                           Text="{Binding Text}" ToolTip="{Binding Text}"/>
+                                <Button Grid.Column="2" Width="28" Height="28"
+                                        Style="{StaticResource Bt.Button.Icon}"
+                                        Command="{Binding RemoveCommand}"
+                                        AutomationProperties.Name="Remove this command">
+                                    <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="12" Text="&#xE74D;"/>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Rectangle Height="1" Margin="0,20,0,20" Fill="{DynamicResource Bt.StrokeSubtleBrush}"/>
+
+                <!-- ===== values the user keeps with the project ===== -->
+                <TextBlock Style="{StaticResource Bt.Text.Overline}" Text="Values"/>
+                <TextBlock Margin="0,6,0,0" Style="{StaticResource Bt.Text.Caption}" TextWrapping="Wrap"
+                           Text="Notes kept with the project. Do not put passwords or keys here - the file is plain text."/>
+
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="160"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Style="{StaticResource Bt.TextBox}"
+                             Text="{Binding NewValueKey, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Name of the new value"/>
+                    <TextBox Grid.Column="1" Margin="8,0,8,0" Style="{StaticResource Bt.TextBox.Mono}"
+                             Text="{Binding NewValueText, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Content of the new value"/>
+                    <Button Grid.Column="2" Style="{StaticResource Bt.Button.Secondary}"
+                            Command="{Binding AddValueCommand}" Content="Add"
+                            AutomationProperties.Name="Add this value to the project"/>
+                </Grid>
+
+                <ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Values}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ValueEntryViewModel}">
+                            <Grid Height="34">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                           Style="{StaticResource Bt.Text.Body}" Text="{Binding Key}"/>
+                                <TextBlock Grid.Column="1" Margin="8,0,8,0" VerticalAlignment="Center"
+                                           Style="{StaticResource Bt.Text.MonoSmall}"
+                                           Text="{Binding Value}" ToolTip="{Binding Value}"/>
+                                <Button Grid.Column="2" Width="28" Height="28"
+                                        Style="{StaticResource Bt.Button.Icon}"
+                                        Command="{Binding RemoveCommand}"
+                                        AutomationProperties.Name="Remove this value">
+                                    <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="12" Text="&#xE74D;"/>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="{DynamicResource Bt.ChromeBackgroundBrush}"
+                BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}" BorderThickness="0,1,0,0">
+            <Grid Margin="24,14,24,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                           Style="{StaticResource Bt.Text.Caption}"
+                           TextWrapping="NoWrap" Text="{Binding Message}"/>
+                <Button Grid.Column="1" Style="{StaticResource Bt.Button.Secondary}"
+                        Margin="0,0,10,0" MinWidth="92" Click="OnCancel" Content="Cancel"/>
+                <Button Grid.Column="2" Style="{StaticResource Bt.Button.Accent}"
+                        MinWidth="92" Click="OnSave" Content="Save"
+                        AutomationProperties.Name="Save this workspace setup"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

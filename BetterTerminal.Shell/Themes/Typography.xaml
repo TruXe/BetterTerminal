@@ -1,0 +1,87 @@
+<!-- Named ramp only (DS-11). No control may set FontSize or FontFamily itself. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <FontFamily x:Key="Bt.Font.Ui">Segoe UI Variable Text, Segoe UI</FontFamily>
+    <FontFamily x:Key="Bt.Font.Display">Segoe UI Variable Display, Segoe UI</FontFamily>
+    <FontFamily x:Key="Bt.Font.Mono">Cascadia Mono, Consolas</FontFamily>
+    <FontFamily x:Key="Bt.Font.Icon">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+
+    <sys:Double x:Key="Bt.FontSize.Display">28</sys:Double>
+    <sys:Double x:Key="Bt.FontSize.Title">20</sys:Double>
+    <sys:Double x:Key="Bt.FontSize.Subtitle">15</sys:Double>
+    <sys:Double x:Key="Bt.FontSize.Body">13</sys:Double>
+    <sys:Double x:Key="Bt.FontSize.BodySmall">12.5</sys:Double>
+    <sys:Double x:Key="Bt.FontSize.Caption">11.5</sys:Double>
+    <sys:Double x:Key="Bt.FontSize.Overline">11</sys:Double>
+    <sys:Double x:Key="Bt.FontSize.Mono">12.5</sys:Double>
+    <sys:Double x:Key="Bt.FontSize.MonoSmall">11.5</sys:Double>
+    <sys:Double x:Key="Bt.FontSize.Icon">14</sys:Double>
+
+    <Style x:Key="Bt.Text.Base" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{DynamicResource Bt.Font.Ui}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Body}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillPrimaryBrush}"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+        <Setter Property="TextWrapping" Value="NoWrap"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <Style x:Key="Bt.Text.Display" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontFamily" Value="{DynamicResource Bt.Font.Display}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Display}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="34"/>
+    </Style>
+    <Style x:Key="Bt.Text.Title" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontFamily" Value="{DynamicResource Bt.Font.Display}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Title}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="26"/>
+    </Style>
+    <Style x:Key="Bt.Text.Subtitle" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Subtitle}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="LineHeight" Value="20"/>
+    </Style>
+    <Style x:Key="Bt.Text.Body" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}"/>
+    <Style x:Key="Bt.Text.BodyStrong" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style x:Key="Bt.Text.BodySecondary" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.BodySmall}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillSecondaryBrush}"/>
+    </Style>
+    <Style x:Key="Bt.Text.Paragraph" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.BodySmall}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillSecondaryBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+        <Setter Property="TextTrimming" Value="None"/>
+        <Setter Property="LineHeight" Value="19"/>
+    </Style>
+    <Style x:Key="Bt.Text.Caption" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Caption}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillTertiaryBrush}"/>
+    </Style>
+    <!-- Section headers: sentence case with tracking. No hardcoded uppercase strings (SLOP-09). -->
+    <Style x:Key="Bt.Text.Overline" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Overline}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillTertiaryBrush}"/>
+    </Style>
+    <Style x:Key="Bt.Text.Mono" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontFamily" Value="{DynamicResource Bt.Font.Mono}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Mono}"/>
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+    </Style>
+    <Style x:Key="Bt.Text.MonoSmall" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Mono}">
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.MonoSmall}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillSecondaryBrush}"/>
+    </Style>
+    <Style x:Key="Bt.Text.Icon" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Base}">
+        <Setter Property="FontFamily" Value="{DynamicResource Bt.Font.Icon}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Icon}"/>
+        <Setter Property="TextTrimming" Value="None"/>
+    </Style>
+</ResourceDictionary>

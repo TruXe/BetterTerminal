@@ -1,0 +1,87 @@
+<Window x:Class="BetterTerminal.Shell.Views.SplashWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" ResizeMode="NoResize" AllowsTransparency="False"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="False"
+        Width="520" Height="300"
+        FontFamily="{DynamicResource Bt.Font.Ui}"
+        Title="Starting BetterTerminal">
+
+    <!-- Splash always uses the dark surface: it shows before the theme preference is read.
+         Colour tokens are Colors, so every use here wraps them in a brush. -->
+    <Window.Background>
+        <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.950}"/>
+    </Window.Background>
+
+    <Border BorderThickness="1">
+        <Border.BorderBrush>
+            <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.700}"/>
+        </Border.BorderBrush>
+        <Grid Margin="40,38,40,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal">
+                <Control Style="{StaticResource Bt.BrandMark}" Width="54" Height="54"/>
+                <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
+                    <TextBlock FontFamily="{DynamicResource Bt.Font.Display}" FontSize="26" FontWeight="SemiBold">
+                        <Run Text="Better">
+                            <Run.Foreground>
+                                <SolidColorBrush Color="{StaticResource Bt.Color.Foam}"/>
+                            </Run.Foreground>
+                        </Run><Run Text="Terminal" FontWeight="Normal">
+                            <Run.Foreground>
+                                <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.400}"/>
+                            </Run.Foreground>
+                        </Run>
+                    </TextBlock>
+                    <TextBlock x:Name="VersionLine" Margin="0,7,0,0"
+                               FontFamily="{DynamicResource Bt.Font.Mono}"
+                               FontSize="{DynamicResource Bt.FontSize.MonoSmall}">
+                        <TextBlock.Foreground>
+                            <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.500}"/>
+                        </TextBlock.Foreground>
+                    </TextBlock>
+                </StackPanel>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,20,0,0">
+                <TextBlock x:Name="Status"
+                           FontFamily="{DynamicResource Bt.Font.Mono}"
+                           FontSize="{DynamicResource Bt.FontSize.Mono}"
+                           Text="Starting the first session">
+                    <TextBlock.Foreground>
+                        <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.400}"/>
+                    </TextBlock.Foreground>
+                </TextBlock>
+                <!-- Cursor blink and the sweep below are the indeterminate-progress exception to
+                     MO-07. Both are stopped in code-behind on close and gated on ClientAreaAnimation. -->
+                <Rectangle x:Name="CaretBlock" Width="7" Height="13" Margin="5,0,0,0"
+                           VerticalAlignment="Center">
+                    <Rectangle.Fill>
+                        <SolidColorBrush Color="{StaticResource Bt.Color.Accent}"/>
+                    </Rectangle.Fill>
+                </Rectangle>
+            </StackPanel>
+
+            <Grid Grid.Row="3" Height="2" ClipToBounds="True">
+                <Grid.Background>
+                    <SolidColorBrush Color="{StaticResource Bt.Color.Neutral.850}"/>
+                </Grid.Background>
+                <Rectangle x:Name="Sweep" Width="170" HorizontalAlignment="Left"
+                           RenderTransformOrigin="0,0.5">
+                    <Rectangle.Fill>
+                        <SolidColorBrush Color="{StaticResource Bt.Color.Accent}"/>
+                    </Rectangle.Fill>
+                    <Rectangle.RenderTransform>
+                        <TranslateTransform x:Name="SweepShift" X="-170"/>
+                    </Rectangle.RenderTransform>
+                </Rectangle>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

@@ -1,0 +1,17 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+
+# Written by tools/: a 10 MB benchmark payload, run logs, window captures.
+docs/_archive/*/flood.txt
+*.log
+*.png
+!docs/images/*.png
+
+# Written by the application into whatever folder it opens.
+.beterm/
+
+# Machine-local assistant state.
+.claude/settings.local.json
