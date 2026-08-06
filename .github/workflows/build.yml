@@ -7,6 +7,11 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_tag:
+        description: 'Tag to build and publish as a prerelease (e.g. v1.0.1). Leave empty to only build.'
+        required: false
+        default: 'v1.0.1'
 
 permissions:
   contents: write
@@ -57,16 +62,20 @@ jobs:
       # Idempotent: if the release already exists (a re-run, or a re-pushed tag), the asset is
       # replaced instead of failing.
       - name: Publish the release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_tag != '')
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = $env:GITHUB_REF_NAME
+          # A tag push sets the version from the ref; a manual run takes it from the input. The tag
+          # is created at the built commit if it does not exist yet, so a manual run publishes even
+          # when the tag event did not fire on its own.
+          $tag = "${{ github.event.inputs.publish_tag }}"
+          if (-not $tag) { $tag = $env:GITHUB_REF_NAME }
           $notes = "Unpack anywhere and run BetterTerminal.exe - the single-file launcher that unpacks and runs the whole application, then cleans up. The loose application is also in app\, and the optional Windows service in service\. The first run installs a copy under %LOCALAPPDATA%\BetterTerminal and registers the beterm command; open a new prompt afterwards. Needs 64-bit Windows and .NET Framework 4.8. BETA."
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag BetterTerminal-x64.zip --clobber
           } else {
-            gh release create $tag BetterTerminal-x64.zip --title $tag --notes $notes --prerelease
+            gh release create $tag BetterTerminal-x64.zip --title $tag --notes $notes --prerelease --target $env:GITHUB_SHA
           }
