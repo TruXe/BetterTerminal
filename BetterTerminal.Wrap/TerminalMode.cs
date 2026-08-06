@@ -55,6 +55,34 @@ namespace BetterTerminal.Wrap
             return terminal;
         }
 
+        /// <summary>
+        /// Hands the console back exactly as it was before this program configured it, so a child
+        /// that draws its own full-screen interface starts from a clean, ordinary console. This is
+        /// the "get out of the way" step before running another program on the same console; take
+        /// the console back afterwards with <see cref="Resume"/>.
+        /// </summary>
+        public void Suspend()
+        {
+            NativeMethods.SetConsoleMode(_output, _originalMode);
+            Console.OutputEncoding = _originalOutputEncoding;
+            Console.InputEncoding = _originalInputEncoding;
+        }
+
+        /// <summary>Turns escape-sequence processing and UTF-8 back on after a <see cref="Suspend"/>.</summary>
+        public void Resume()
+        {
+            int mode;
+            if (NativeMethods.GetConsoleMode(_output, out mode))
+            {
+                NativeMethods.SetConsoleMode(_output,
+                    mode | NativeMethods.ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+            }
+
+            UTF8Encoding utf8 = new UTF8Encoding(false);
+            Console.OutputEncoding = utf8;
+            Console.InputEncoding = utf8;
+        }
+
         public void EnterAlternateScreen(AnsiWriter writer)
         {
             if (_alternateScreen)

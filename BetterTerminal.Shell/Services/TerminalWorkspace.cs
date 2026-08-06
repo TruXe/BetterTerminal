@@ -488,6 +488,16 @@ namespace BetterTerminal.Shell.Services
                 Shell = ShellProfile.WindowsPowerShell
             });
 
+            _model.Profiles.Add(new ProfileViewModel
+            {
+                Name = ShellProfile.CliAiWizard.Name,
+                CommandLine = ShellPresentation.Apply(ShellProfile.CliAiWizard).BuildCommandLine(),
+                Source = "built-in",
+                Accelerator = "Ctrl+Shift+3",
+                ScrollbackLines = TerminalSessionFactory.DefaultScrollbackLines,
+                Shell = ShellProfile.CliAiWizard
+            });
+
             _model.DefaultProfile = _model.Profiles[0];
         }
 
@@ -883,6 +893,8 @@ namespace BetterTerminal.Shell.Services
                     delegate { NewTabWith(ShellProfile.CommandPrompt); }),
                 Command("New tab with Windows PowerShell", "Tabs", "\uE756", "",
                     delegate { NewTabWith(ShellProfile.WindowsPowerShell); }),
+                Command("New tab with CLI-AI Wizard", "Tabs", "\uE756", "",
+                    delegate { NewTabWith(ShellProfile.CliAiWizard); }),
                 Command("Open settings", "Application", "\uE713", "Ctrl+comma", OpenSettings),
                 Command("Saved connections", "Application", "\uE8AF", "", OpenConnections),
                 Command("Workspace setup", "Application", "\uE8B7", "", OpenWorkspaceSetup),

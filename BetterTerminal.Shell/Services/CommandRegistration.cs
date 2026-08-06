@@ -19,6 +19,7 @@ namespace BetterTerminal.Shell.Services
         public const string CommandName = "beterm";
 
         private const string BannerName = "beterm-banner.exe";
+        private const string WizardName = "beterm-aiwizard.exe";
         private const string HomeVariable = "BETERM_HOME";
         private const string EnvironmentKey = "Environment";
         private const string PathValue = "Path";
@@ -54,7 +55,7 @@ namespace BetterTerminal.Shell.Services
 
                 Directory.CreateDirectory(BinDirectory);
                 WriteScript(installed ?? ExecutablePath());
-                CopyBanner();
+                CopyHelpers();
                 JoinSearchPath();
             }
             catch (IOException)
@@ -76,11 +77,12 @@ namespace BetterTerminal.Shell.Services
         }
 
         /// <summary>
-        /// The banner program goes in the same folder as the command, which is the one folder this
-        /// application puts on the search path - that is how a shell finds it by name alone, with
-        /// no path to quote into its command line.
+        /// The helper programs go in the same folder as the command, which is the one folder this
+        /// application puts on the search path - that is how a shell, or a pane, finds them by name
+        /// alone, with no path to quote into a command line. The banner is what a session prints
+        /// when it opens; the wizard is the CLI-AI Wizard profile's program.
         /// </summary>
-        private static void CopyBanner()
+        private static void CopyHelpers()
         {
             string executable = ExecutablePath();
             if (executable == null)
@@ -90,9 +92,16 @@ namespace BetterTerminal.Shell.Services
 
             string folder = Path.GetDirectoryName(executable);
 
-            // The banner needs the interop assembly beside it, exactly as it does in the build
-            // output; an executable copied on its own would fail to load on its first call.
-            foreach (string name in new[] { BannerName, "BetterTerminal.Interop.dll" })
+            // Each program needs the assemblies it loads beside it, exactly as in the build output;
+            // an executable copied on its own would fail to load on its first call. The interop
+            // assembly is shared by both; the wizard also carries its own library.
+            foreach (string name in new[]
+            {
+                BannerName,
+                WizardName,
+                "BetterTerminal.Interop.dll",
+                "BetterTerminal.AIWizard.dll"
+            })
             {
                 CopyIfNewer(Path.Combine(folder, name), Path.Combine(BinDirectory, name));
             }

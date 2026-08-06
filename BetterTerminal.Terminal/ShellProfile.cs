@@ -43,6 +43,17 @@ namespace BetterTerminal.Terminal
         }
 
         /// <summary>
+        /// The guided command builder for CLI AI agents. Like the banner program it is reached by
+        /// name, from the folder the command registration puts on the search path, so no path is
+        /// ever quoted into a command line. Its arguments are empty: the wizard reads the pane's
+        /// working directory from the environment and needs nothing on its own command line.
+        /// </summary>
+        public static ShellProfile CliAiWizard
+        {
+            get { return new ShellProfile("CLI-AI Wizard", "beterm-aiwizard.exe", string.Empty); }
+        }
+
+        /// <summary>
         /// The same shell started differently. The name is kept, because that is what the saved
         /// layout stores and what a restored pane looks the profile up by.
         /// </summary>

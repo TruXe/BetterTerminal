@@ -198,6 +198,28 @@ enforces them.
   `HKCU\Environment\Path`. Nothing is written to `Program Files`, to the machine-wide search path or
   to `HKLM`, no uninstall entry is registered, and both steps stay best effort - a failure may not
   stop the window opening.
+- **[convention] One deliberate elevation exception, added 2026-08-06: the separate
+  `beterm-service.exe` service host.** Registering a Windows service is machine-wide and needs an
+  elevated prompt and the service database, so `beterm-service.exe --install` is the one component
+  that elevates - run by hand, once, by the operator, never by the application. **The application
+  itself still runs `asInvoker` and never elevates**, never installs the service, and does not depend
+  on it. It writes only to the machine service database and the application event log. The user's
+  explicit choice after being told a service cannot be per user,
+  [MEMORY #decision-log](MEMORY.md#decision-log).
+- **[convention] The CLI-AI Wizard builds a command line from menu choices - which is its whole
+  point - so its own child is exempt from "never build a child command line out of user-typed
+  text".** It is safe because every free-text value is run through the allow-list `TextSanitizer`
+  first, the choices are fixed strings, and the assembled command is the wizard's own child, not a
+  Shell command line spliced from user text. The Shell's rule is unchanged.
+- **[convention] The one-file launcher is native and is the named exception to R1/R2's "everything is
+  .NET 4.8, classic csproj" - which describe the .NET projects.** `BetterTerminal.Bootstrap` is a C++
+  `vcxproj` (C++17, x64, no package, no vcpkg/NuGet) that only embeds, unpacks, runs and cleans up;
+  it must not change the application's behaviour, and it runs `asInvoker` like everything else. It
+  depends on the C# build being present, declared as a solution build dependency on the Shell.
+- **[convention] New framework assembly references added 2026-08-06, no package (R2 holds):**
+  `System.ServiceProcess` and `System.Configuration.Install` for the service, and
+  `System.Runtime.Serialization` + `System.Xml` for the wizard's JSON model file. All ship with
+  .NET Framework 4.8. They implement features the user named, so they satisfy R3.
 - **[enforced by construction] The generated script contains no absolute path and no non-ASCII
   byte.** It reaches the installed copy as `%~dp0..\app\BetterTerminal.exe`. A script is decoded in
   whatever code page the console is using, so an accented character in it is a coin flip - this is

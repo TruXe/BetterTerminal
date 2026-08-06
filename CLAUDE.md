@@ -39,7 +39,7 @@ Since 2026-08-05 the first run installs a copy of itself under `%LOCALAPPDATA%\B
 - No external API or package name (ConPTY, conhost, WPF, Win32) in user-visible UI text; code comments and docs only. See [RULES.md](RULES.md#never-do).
 
 ## Fast facts
-- Stack: .NET Framework 4.8, C# 7.3, WPF, x64 only, classic non-SDK csproj, zero NuGet packages. Five projects: Interop, Terminal, Shell (the app), Wrap (`beterm-wrap.exe`, a console front end for `tools\*.ps1`) and Banner (`beterm-banner.exe`, what a session prints when it opens).
+- Stack: .NET Framework 4.8, C# 7.3, WPF, x64 only, classic non-SDK csproj, zero NuGet packages. Nine projects (eight .NET, one native C++): Interop, Terminal, Shell (the app), Wrap (`beterm-wrap.exe`, a console front end for `tools\*.ps1`), Banner (`beterm-banner.exe`, what a session prints when it opens), AIWizard (a DLL of CLI-AI Wizard logic), AIWizard.Cli (`beterm-aiwizard.exe`, the wizard the shell picker can launch), Service (`beterm-service.exe`, a Windows service host) and Bootstrap (a C++ `vcxproj` building `BetterTerminal-Launcher.exe`, a one-file launcher that embeds and unpacks the whole app). The last four landed 2026-08-06 as BETA.
 - Run: `BetterTerminal.Shell\bin\x64\Debug\BetterTerminal.exe` · Test: no test project exists - verification is a warning-clean rebuild plus the `tools\ui-smoke.ps1` pane sequences, see [WORKFLOWS.md](WORKFLOWS.md#testing) · Build: `MSBuild.exe "BetterTerminal.sln" /p:Configuration=Debug /p:Platform=x64` (also `Release`).
 - Entry point: `BetterTerminal.Shell` (`App.xaml`, `MainWindow.xaml`), see [STRUCTURE.md](STRUCTURE.md#entry-points).
 - Never touch: `bin\`, `obj\`, `.vs\`, `docs\_archive\`.

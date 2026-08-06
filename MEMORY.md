@@ -13,6 +13,14 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-06 (BETA).** Two new, unverified-by-a-person features landed: a **CLI-AI Wizard**
+profile in the shell picker - a guided launcher for CLI AI agents ported from Deerpfy's `ai.bat`
+into `BetterTerminal.AIWizard` (DLL) plus `beterm-aiwizard.exe` - and a real Windows service host,
+`beterm-service.exe` (**BetterTerminal Host**), that stands for the helper components as a service.
+Both configurations still rebuild zero-warning. The user drives the interactive pass and only then
+authorises a git push and a new build. Details and the deliberate elevation exception are in the
+newest [decision-log](#decision-log) entry.
+
 **Update 2026-08-05.** BetterTerminal now registers itself as the command `beterm`, opens the folder
 it was called from as a project with its settings in a hidden `.beterm` folder, lets the user define
 their own commands and values there, and keeps an address book of remote connections with a
@@ -57,6 +65,119 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-06 - A native C++ launcher carrying the whole app, and the wizard hands the console over cleanly
+
+**Context (two things in one run):** First, a bug: pressing Run in the CLI-AI Wizard froze the pane
+instead of starting the agent. The wizard is the pane's own process and had left the console in its
+own mode (escape-sequence processing, UTF-8) while a full-screen agent tried to take over - so the
+agent inherited a console it did not own and stalled. Second, the user asked for a **single native
+C++ executable** that embeds the entire C# build, unpacks it to a temp folder, runs it, waits, and
+cleans up - one file to run the whole project.
+
+**Fix for the freeze:** `TerminalMode` gained `Suspend()`/`Resume()` (in the shared Wrap file).
+`WizardConsole.Launch` now **suspends** the console - hands it back exactly as it was before the
+wizard configured it - runs the agent, and **resumes** only after it exits. This is the "close the
+BAT first, then run with the specs" behaviour the user described. Verified: rebuilds zero-warning;
+the live agent run is the user's BETA check.
+
+**Launcher decision:** a new **native** project `BetterTerminal.Bootstrap` (a `vcxproj`, C++17, x64,
+`/SUBSYSTEM:WINDOWS` so no console flashes) builds `BetterTerminal-Launcher.exe`. A build-time
+packer, `tools\pack-payload.ps1`, packs the whole `BetterTerminal.Shell` output for the current
+configuration into `payload.pack` (trivial format: magic, count, then per file a UTF-8 relative
+path and its bytes), which the `.rc` embeds as one `RCDATA` resource. At run time modular RAII
+classes do the rest: `ResourceManager` reads the resource, `PayloadArchive` parses it with bounds
+checks, `TempDirectory` (RAII) makes `%TEMP%\BetterTerminal\{GUID}` and deletes it in its
+destructor - so cleanup runs even on an exception, `PayloadExtractor` writes and size-verifies each
+file, `ProcessLauncher` starts the app with `CreateProcessW` in that directory and waits, and the
+child's exit code becomes the launcher's. Its own arguments are forwarded, so
+`BetterTerminal-Launcher.exe --project C:\x` still opens a project.
+
+**Why unpack, not hostfxr:** `hostfxr`/`nethost` host only .NET Core+, and this app is .NET
+Framework 4.8 WPF. More decisively, **self-install depends on a real file on disk**:
+`SelfInstall`/`CommandRegistration` read `Assembly.Location` and copy `BetterTerminal*` plus the
+helpers out to `%LOCALAPPDATA%`. Launched from the temp copy, the first run copies everything into
+the persistent per-user folders, so after the launcher deletes temp, `beterm` and the helpers keep
+working. The launcher **waits for full exit** before cleanup, which is what makes this safe. So the
+unpack-and-run model was kept and self-install is unchanged.
+
+**Traps paid for, worth remembering:**
+- A header named `WinError.h` on the include path **shadowed the Windows SDK's `winerror.h`**, which
+  `windows.h` includes internally - so `windows.h` itself failed to compile with a cascade of errors
+  in `shellapi.h`. Renamed to `Errors.h`. Never name a header the same as a SDK header that
+  `windows.h` pulls in.
+- `#include <shellapi.h>` **before** `<windows.h>` fails: shellapi.h needs windows.h's macros first.
+  Order the Windows headers windows.h-first.
+
+**Integration:** classic .NET projects unchanged. The launcher is added to the solution as a mixed
+native project with a build dependency on `BetterTerminal.Shell` (so the app builds first, then the
+packer runs). `PlatformToolset` is `$(DefaultPlatformToolset)` so it uses whatever C++ toolset is
+installed. `payload.pack` is generated and git-ignored.
+
+**Verified 2026-08-06:** both configurations rebuild all nine projects **zero-error zero-warning**;
+the packer embeds the whole app (launcher exe is larger than the app payload, confirming the single
+file carries it). **Not verified by a person:** the launcher actually unpacking and running the app
+end to end, and the wizard's Run starting a live agent - the user's BETA pass.
+
+### 2026-08-06 - A CLI-AI Wizard profile, ported from ai.bat, and a real service host (both BETA)
+
+**Context:** The user asked for three things in one run: a guided launcher for CLI AI agents
+(Claude, Codex, Gemini, Antigravity), ported from Deerpfy's `ai.bat`
+(github.com/Deerpfy/ai.bat), added to the shell picker beside Command Prompt and PowerShell as
+"CLI-AI Wizard"; the port to live in its own project used as a DLL; and the banner and wrap helpers
+"installed as a Windows service" - invisible, but visible in `services.msc`. The whole feature set
+is **BETA**; the user verifies it and only then gives the word to push and cut a build.
+
+**Decision, in three parts:**
+
+1. **`BetterTerminal.AIWizard` (DLL) holds the logic**, `BetterTerminal.AIWizard.Cli`
+   (`beterm-aiwizard.exe`) is the console front end, and the picker launches the exe in a pane the
+   same way it launches a shell. The DLL is pure data and string-building: engine definitions, the
+   menu flows transcribed from `ai.bat` with each option's exact flag, the model list read from
+   `ai-models.json`, the command composer, the project-root walk to the outermost `.git`, the Git
+   Bash lookup and an allow-list sanitiser. The exe reuses `Palette`/`AnsiWriter`/`TerminalMode`
+   from Wrap (linked, not copied) and drives the steps, then runs the assembled command through
+   `cmd /c` in the resolved directory, inheriting the pane's console **and its job**, so closing the
+   pane still takes the agent with it. The wizard header credits Deerpfy.
+
+2. **The exe is reached by name**, exactly like the banner: `ShellProfile.CliAiWizard` carries the
+   bare `beterm-aiwizard.exe`, `CommandRegistration` stages it and `BetterTerminal.AIWizard.dll`
+   into the per-user `bin` folder on the search path, and the Shell references the Cli project only
+   so the exe lands in its output. `CreateProcess` finds it on PATH; nothing quotes a path into a
+   command line.
+
+3. **One real Windows service, not two.** The banner runs once and exits and the wrap front end is
+   interactive - neither is a service by nature, and a service has no console to give them. So
+   `BetterTerminal.Service` (`beterm-service.exe`) is a single `ServiceBase` host with no window,
+   visible in `services.msc` as **BetterTerminal Host**, that registers and accounts for the helper
+   components and logs its life to the application log. It self-installs with
+   `beterm-service.exe --install`.
+
+**The rule this bends, on purpose:** registering a service is machine-wide and needs an elevated
+prompt and the service database - against the standing "per user, never elevate" rule
+([RULES #security-and-secrets](RULES.md#security-and-secrets)). This is the exception the user chose
+after being told the trade-off; **the application itself still never elevates** - only the separate,
+manually run `beterm-service.exe --install` does, once. Two framework assemblies were added for it,
+`System.ServiceProcess` and `System.Configuration.Install`, and `System.Runtime.Serialization` +
+`System.Xml` for the wizard's JSON model file - all part of .NET Framework 4.8, no package (R2 holds).
+
+**Deliberately not ported:** `ai.bat`'s online model-list refresh (models.dev, the API key path,
+the checksum/date update gates) and its OAuth account setup. Those are update tooling and a network
+feature; the wizard reads `ai-models.json` if present and seeds a small built-in list otherwise, so
+building a command needs no network. The model step always offers a custom id, so a stale list never
+blocks a run. The per-engine flows are a faithful core subset, structured so a new option is one
+line - not every branch of the launcher is present yet (BETA).
+
+**Verified 2026-08-06:** both configurations rebuild **zero-error zero-warning**;
+`beterm-aiwizard.exe` and `BetterTerminal.AIWizard.dll` land in the Shell output; `beterm-service.exe`
+builds standalone and the Shell does not depend on it. **Not yet verified by a person:** the wizard
+running live in a pane, each assembled command actually starting its agent, and the service install
+on an elevated prompt - these are the user's BETA pass. Some agent flag mappings are transcribed
+from a summary of `ai.sh`, not confirmed against each live CLI.
+
+**Revisit if:** an agent changes a flag (fix the one line in `WizardCatalog`); the model list should
+refresh online (that reopens the network-call rule); or the service should do more than register and
+account for the helpers.
 
 ### 2026-08-05 - The session opens on a mark and four facts, and the prompt says machine and place
 

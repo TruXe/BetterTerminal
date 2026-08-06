@@ -33,12 +33,19 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory dist | Out-Null
-          Copy-Item BetterTerminal.Shell\bin\x64\Release\*.exe dist
-          Copy-Item BetterTerminal.Shell\bin\x64\Release\*.dll dist
-          Copy-Item BetterTerminal.Wrap\bin\x64\Release\beterm-wrap.exe dist
+          # The one-file launcher is the headline distributable: it embeds and runs the whole app.
+          Copy-Item BetterTerminal.Bootstrap\bin\x64\Release\BetterTerminal.exe dist
+          # The same application, expanded, for anyone who prefers loose files.
+          New-Item -ItemType Directory dist\app | Out-Null
+          Copy-Item BetterTerminal.Shell\bin\x64\Release\*.exe dist\app
+          Copy-Item BetterTerminal.Shell\bin\x64\Release\*.dll dist\app
+          Copy-Item BetterTerminal.Wrap\bin\x64\Release\beterm-wrap.exe dist\app
+          # The optional Windows service.
+          New-Item -ItemType Directory dist\service | Out-Null
+          Copy-Item BetterTerminal.Service\bin\x64\Release\beterm-service.exe dist\service
           Copy-Item README.md, LICENSE dist
           Compress-Archive -Path dist\* -DestinationPath BetterTerminal-x64.zip
-          Get-ChildItem dist | Select-Object Name, Length
+          Get-ChildItem dist -Recurse | Select-Object FullName, Length
 
       - name: Keep the build as an artifact
         uses: actions/upload-artifact@v4
@@ -55,4 +62,4 @@ jobs:
         run: |
           gh release create $env:GITHUB_REF_NAME BetterTerminal-x64.zip `
             --title $env:GITHUB_REF_NAME `
-            --notes "Unpack anywhere and run BetterTerminal.exe. The first run installs a copy under %LOCALAPPDATA%\BetterTerminal and registers the beterm command; open a new prompt afterwards. Needs 64-bit Windows and .NET Framework 4.8."
+            --notes "Unpack anywhere and run BetterTerminal.exe - the single-file launcher that unpacks and runs the whole application, then cleans up. The loose application is also in app\, and the optional Windows service in service\. The first run installs a copy under %LOCALAPPDATA%\BetterTerminal and registers the beterm command; open a new prompt afterwards. Needs 64-bit Windows and .NET Framework 4.8. BETA."

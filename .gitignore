@@ -10,6 +10,12 @@ docs/_archive/*/flood.txt
 *.png
 !docs/images/*.png
 
+# Generated at build time by the bootstrapper: the packed copy of the C# build it embeds.
+BetterTerminal.Bootstrap/payload.pack
+
+# Local assembled release output; the published release is built by CI from a tag.
+BUILD/
+
 # Written by the application into whatever folder it opens.
 .beterm/
 

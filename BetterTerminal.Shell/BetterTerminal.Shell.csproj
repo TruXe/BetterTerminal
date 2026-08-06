@@ -225,6 +225,13 @@
       <Project>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40005}</Project>
       <Name>BetterTerminal.Banner</Name>
     </ProjectReference>
+    <!-- Not called by any code here: the reference is what puts beterm-aiwizard.exe and its library
+         in this project's output, so the command registration can stage them where a pane finds
+         them by name for the CLI-AI Wizard profile. -->
+    <ProjectReference Include="..\BetterTerminal.AIWizard.Cli\BetterTerminal.AIWizard.Cli.csproj">
+      <Project>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40007}</Project>
+      <Name>BetterTerminal.AIWizard.Cli</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

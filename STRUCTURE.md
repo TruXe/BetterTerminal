@@ -8,8 +8,14 @@ owner_agent: structure-agent
 
 # STRUCTURE
 
-Five classic (non-SDK) C# projects, .NET Framework 4.8, C# 7.3, x64 only, no NuGet packages.
-Solution: `BetterTerminal.sln`. The app assembly is `BetterTerminal.exe`, built from
+Eight classic (non-SDK) C# projects, .NET Framework 4.8, C# 7.3, x64 only, no NuGet packages.
+Solution: `BetterTerminal.sln`. The three added on 2026-08-06 are `BetterTerminal.AIWizard` (a DLL
+of wizard logic), `BetterTerminal.AIWizard.Cli` (`beterm-aiwizard.exe`, the CLI-AI Wizard the shell
+picker can launch in a pane) and `BetterTerminal.Service` (`beterm-service.exe`, a Windows service
+host). A ninth, **native** project `BetterTerminal.Bootstrap` (a C++ `vcxproj`) builds
+`BetterTerminal-Launcher.exe`, which embeds the whole application build and unpacks-and-runs it from
+one file - the only non-.NET project in the solution.
+See [MEMORY #decision-log](MEMORY.md#decision-log). The app assembly is `BetterTerminal.exe`, built from
 `BetterTerminal.Shell` (root namespace `BetterTerminal.Shell`); `BetterTerminal.Wrap` is a separate
 console program, `beterm-wrap.exe`, and nothing in the application depends on it.
 `BetterTerminal.Banner` builds `beterm-banner.exe`, which the Shell references only so that it lands
@@ -88,7 +94,35 @@ root, `TerminalPane`, `SplitPane` and `PaletteCommand` no longer exist.
 │   ├── ChildProcess.cs OutputLog.cs    streamed and pass-through runs, scrollback
 │   ├── Screen.cs Picker/Argument/Output/ResultScreen.cs   the four screens
 │   └── bin/ obj/                   GENERATED
+├── BetterTerminal.AIWizard/        class library - CLI-AI Wizard logic, no UI, no P/Invoke
+│   ├── AiEngine.cs                 the four agents (Claude, Codex, Gemini, Antigravity) as data
+│   ├── WizardStep.cs WizardCatalog.cs   the menu flows, each option carrying its exact flag
+│   ├── ModelCatalog.cs             reads/seeds %APPDATA%\BetterTerminal\ai-models.json (JSON)
+│   ├── CommandComposer.cs TextSanitizer.cs   assemble the command; allow-list clean typed values
+│   ├── WorkspaceRoot.cs GitBash.cs WizardInfo.cs   outermost .git walk, Git Bash lookup, version
+│   └── bin/ obj/                   GENERATED - BetterTerminal.AIWizard.dll
+├── BetterTerminal.AIWizard.Cli/    console Exe - beterm-aiwizard.exe, the wizard front end
+│   │                               Palette/AnsiWriter/TerminalMode are LINKED in from Wrap
+│   ├── Program.cs WizardConsole.cs ConsoleUi.cs CommandRunner.cs   loop, drawing, launching
+│   └── bin/ obj/                   GENERATED
+├── BetterTerminal.Service/         Windows service Exe - beterm-service.exe (BetterTerminal Host)
+│   ├── Program.cs                  --install / --uninstall / --console, else ServiceBase.Run
+│   ├── HostService.cs              ServiceBase: no window, logs start/stop to the application log
+│   ├── ProjectInstaller.cs ServiceControl.cs   self-install (needs an elevated prompt)
+│   ├── HelperInventory.cs          which helper exes are staged beside it
+│   └── bin/ obj/                   GENERATED
+├── BetterTerminal.Bootstrap/       NATIVE C++ vcxproj - BetterTerminal-Launcher.exe (one-file launcher)
+│   ├── src/main.cpp                wWinMain: forward args, run, show any error once
+│   ├── src/Bootstrapper.h          orchestration: read payload, unpack, launch, wait, return code
+│   ├── src/ResourceManager.h PayloadArchive.h PayloadExtractor.h   embedded payload -> disk
+│   ├── src/TempDirectory.h         RAII %TEMP%\BetterTerminal\{GUID}, removed in the destructor
+│   ├── src/ProcessLauncher.h Handle.h   CreateProcessW + RAII handles
+│   ├── src/Log.h Errors.h          debug-only log; failures as exceptions (NOT WinError.h - see below)
+│   ├── Bootstrap.rc resource.h app.manifest   embeds payload.pack as RCDATA; asInvoker
+│   ├── payload.pack                GENERATED at build by tools\pack-payload.ps1 (git-ignored)
+│   └── bin/ obj/                   GENERATED
 ├── tools/                          capture-window.ps1 ui-smoke.ps1 flood-benchmark.ps1 session-cycle.ps1
+│                                   + pack-payload.ps1 packs the Shell output into payload.pack
 ├── docs/_archive/2026-08-04/       superseded markdown + ARCHIVE-INDEX.md
 └── .vs/                            GENERATED - Visual Studio local state
 ```
@@ -181,6 +215,9 @@ also carries `theme`, `scheme`, `fontFamily`, `fontSize`, `cursorShape` and `bli
 | A new SGR attribute | `BetterTerminal.Terminal/VtParser.cs`, `ApplySimpleRendition(int code)` | the bold/underline arms; the bit itself goes in `CellFlags.cs` |
 | A new key-to-escape mapping | `BetterTerminal.Terminal/VtKeyEncoder.cs`, `Encode` | `case Key.F5:`; return null when the key must reach the window shortcuts instead |
 | A new shell profile | `BetterTerminal.Terminal/ShellProfile.cs` as a static property, then register it in `Services/TerminalWorkspace.cs` `BuildProfiles()` | `ShellProfile.WindowsPowerShell` - resolve the exe under `Environment.SpecialFolder.System`, never a hardcoded `C:\`; the profile `Name` is what `workspace.json` stores. To give it the shell presentation as well, add an arm to `Services/ShellPresentation.cs` keyed on its executable name |
+| A new CLI-AI Wizard menu option or a changed agent flag | `BetterTerminal.AIWizard/WizardCatalog.cs`, the step list for that engine | a `Choice('n', "Label", "--flag")` line, or `.AskingFor("prompt")` for one that needs a value; the option carries the exact flag, so nothing else changes. A new engine is an `EngineInfo` plus a `StepsFor` arm |
+| A change to how the wizard front end draws or launches | `BetterTerminal.AIWizard.Cli/` (`ConsoleUi.cs` to draw, `CommandRunner.cs` to launch) | `ConsoleUi.Option`; the launcher runs `cmd /c` in the resolved directory and leaves the child in the pane's job |
+| A change to what the one-file launcher embeds or how it unpacks | `tools\pack-payload.ps1` (what goes in) and `BetterTerminal.Bootstrap/src/` (how it comes out) | the packer reads the Shell output; the C++ classes are RAII and header-only. Do NOT name a header like a Windows SDK header (`WinError.h` shadowed the SDK's `winerror.h`); include `windows.h` before `shellapi.h` |
 | A change to how a shell looks when it starts | `Services/ShellPresentation.cs` | the `cmd.exe` arm: banner cleared with `cls`, path coloured through `PROMPT $E`; the PowerShell arm passes its script `-EncodedCommand` so no layer in between reinterprets the quoting. User text never goes on the command line - the project name travels in an environment variable and is reduced to harmless characters first |
 | A new P/Invoke | `BetterTerminal.Interop/NativeMethods.cs` only | the `CreatePseudoConsole` / `CreateWindowExW` entries: explicit `SetLastError`, explicit `CharSet.Unicode` on W functions, `EntryPoint` when names differ |
 | A new Win32 struct or handle type | its own file in `BetterTerminal.Interop/` | `StartupInfoEx.cs` (explicit `Pack`, IntPtr-sized pointer fields); `SafePseudoConsoleHandle.cs` for handles |
