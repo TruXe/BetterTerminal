@@ -58,9 +58,9 @@ jobs:
           name: BetterTerminal-x64
           path: BetterTerminal-x64.zip
 
-      # A tag is what publishes. The token is the one the run is given; nothing is stored here.
-      # Idempotent: if the release already exists (a re-run, or a re-pushed tag), the asset is
-      # replaced instead of failing.
+      # A tag is what publishes, and what it publishes is BetterTerminal.exe on its own. The token
+      # is the one the run is given; nothing is stored here. Idempotent: if the release already
+      # exists (a re-run, or a re-pushed tag), the asset is replaced instead of failing.
       - name: Publish the release
         if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_tag != '')
         shell: pwsh
@@ -72,13 +72,19 @@ jobs:
           # when the tag event did not fire on its own.
           $tag = "${{ github.event.inputs.publish_tag }}"
           if (-not $tag) { $tag = $env:GITHUB_REF_NAME }
-          $notes = "Unpack anywhere and run BetterTerminal.exe - the single-file launcher that unpacks and runs the whole application, then cleans up. The loose application is also in app\, and the optional Windows service in service\. The first run installs a copy under %LOCALAPPDATA%\BetterTerminal and registers the beterm command; open a new prompt afterwards. Needs 64-bit Windows and .NET Framework 4.8. BETA."
+          $notes = "Download BetterTerminal.exe and run it - one file, nothing to unpack. It carries the whole application, unpacks it to a private temporary folder, runs it and cleans up afterwards. The first run installs a copy under %LOCALAPPDATA%\BetterTerminal and registers the beterm command, so it keeps working after the temporary folder is gone; open a new prompt afterwards. Needs 64-bit Windows and .NET Framework 4.8. BETA."
+          # The release carries the one file a user needs and nothing else. The archive of loose
+          # files stays as the run's own artifact, for anyone who has to look inside a build.
+          $asset = "dist\BetterTerminal.exe"
           # A published version is a release, never a pre-release - so a release that already
           # exists is corrected as well, not only the ones this step creates.
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag BetterTerminal-x64.zip --clobber
+            gh release upload $tag $asset --clobber
             gh release edit $tag --prerelease=false --latest
+            # An earlier run of this workflow published the archive; a release that says it carries
+            # one file must not still be offering it.
+            gh release delete-asset $tag BetterTerminal-x64.zip --yes 2>$null
           } else {
-            gh release create $tag BetterTerminal-x64.zip --title $tag --notes $notes --latest --target $env:GITHUB_SHA
+            gh release create $tag $asset --title $tag --notes $notes --latest --target $env:GITHUB_SHA
           }

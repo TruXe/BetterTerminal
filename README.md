@@ -5,7 +5,7 @@ A Windows terminal that opens on the folder you are working in.
 | | |
 | --- | --- |
 | **Version** | 1.3.0 · BETA |
-| **Download** | [`BetterTerminal-x64.zip`](../../releases/latest) |
+| **Download** | [`BetterTerminal.exe`](../../releases/latest) - one file, nothing to unpack |
 | **Runs on** | 64-bit Windows 10 / 11 with .NET Framework 4.8 |
 | **Built with** | .NET Framework 4.8 · WPF · direct Win32 interop |
 | **Dependencies** | none - **zero NuGet packages**, builds offline with MSBuild alone |
@@ -26,13 +26,20 @@ runs.
 
 ## Install
 
-1. Download `BetterTerminal-x64.zip` from the [latest release](../../releases/latest) and unpack it
-   anywhere.
-2. Run `BetterTerminal.exe` once.
+1. Download `BetterTerminal.exe` from the [latest release](../../releases/latest).
+2. Run it.
 
-The first run copies itself to `%LOCALAPPDATA%\BetterTerminal\app` and registers the `beterm`
-command - no installer, no administrator rights, nothing written outside your user profile. Open a
+That one file carries the whole application: it unpacks itself into a private temporary folder,
+runs, and clears the folder away when you close it. There is nothing to unpack by hand and nothing
+left lying around.
+
+The first run also copies the application to `%LOCALAPPDATA%\BetterTerminal\app` and registers the
+`beterm` command - no installer, no administrator rights, nothing written outside your user profile.
+That copy is what `beterm` starts, so it keeps working after the temporary folder is gone. Open a
 **new** prompt afterwards, because a prompt only reads the search path when it starts.
+
+Running a newer `BetterTerminal.exe` replaces that copy with the newer version by itself; an older
+one leaves a newer copy alone.
 
 To remove it: delete `%LOCALAPPDATA%\BetterTerminal` and `%APPDATA%\BetterTerminal`.
 
@@ -109,13 +116,15 @@ exit code instead of going blank.
 
 ## Also in the box
 
-| Program | What it is for |
-| --- | --- |
-| `BetterTerminal.exe` (root of the zip) | The one-file launcher: it carries the whole application, unpacks it to a private temporary folder, runs it and cleans up. Arguments are passed through. |
-| `app\beterm-banner.exe` | Writes the banner a session opens on. The shell runs it as its first command. |
-| `app\beterm-wrap.exe` | A text interface for the PowerShell scripts in `tools\`: pick one, fill in its parameters, watch its output and see the exit code it really returned. |
-| `app\beterm-aiwizard.exe` | The CLI-AI Wizard, also reachable from the shell picker beside Command Prompt and PowerShell. Ported from Deerpfy's `ai.bat`. |
-| `service\beterm-service.exe` | The optional "BetterTerminal Host" Windows service. Installing it is machine-wide and needs an elevated prompt: `beterm-service.exe --install`. The application itself never elevates. |
+The download is one executable, and these come inside it. After the first run they sit in
+`%LOCALAPPDATA%\BetterTerminal\app` beside the `beterm` command.
+
+| Program | What it is for | In the download |
+| --- | --- | --- |
+| `beterm-banner.exe` | Writes the banner a session opens on. The shell runs it as its first command. | yes |
+| `beterm-aiwizard.exe` | The CLI-AI Wizard, also reachable from the shell picker beside Command Prompt and PowerShell. Ported from Deerpfy's `ai.bat`. | yes |
+| `beterm-wrap.exe` | A text interface for the PowerShell scripts in `tools\`: pick one, fill in its parameters, watch its output and see the exit code it really returned. | build it yourself |
+| `beterm-service.exe` | The optional "BetterTerminal Host" Windows service. Installing it is machine-wide and needs an elevated prompt: `beterm-service.exe --install`. The application itself never elevates. | build it yourself |
 
 ## Build it yourself
 
