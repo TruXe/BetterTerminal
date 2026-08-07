@@ -1,4 +1,4 @@
-<!-- Tier 2 (DS-02): semantic brushes. Light.
+﻿<!-- Tier 2 (DS-02): semantic brushes. Light.
      Every key here exists with the same name in every sibling Tokens.*.xaml (DS-04 parity). -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -47,4 +47,14 @@
 
     <SolidColorBrush x:Key="Bt.FocusStrokeOuterBrush" Color="{StaticResource Bt.Color.Ink}"/>
     <SolidColorBrush x:Key="Bt.FocusStrokeInnerBrush" Color="{StaticResource Bt.Color.Neutral.0}"/>
+
+    <!-- Code (DS-04 parity: the same eight keys in every sibling). -->
+    <SolidColorBrush x:Key="Bt.Syntax.CommentBrush" Color="{StaticResource Bt.Color.Code.Comment.Light}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.StringBrush" Color="{StaticResource Bt.Color.Code.String.Light}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.NumberBrush" Color="{StaticResource Bt.Color.Code.Number.Light}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.KeywordBrush" Color="{StaticResource Bt.Color.Code.Keyword.Light}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.TagBrush" Color="{StaticResource Bt.Color.Code.Tag.Light}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.AttributeBrush" Color="{StaticResource Bt.Color.Code.Attribute.Light}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.PropertyBrush" Color="{StaticResource Bt.Color.Code.Property.Light}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.OperatorBrush" Color="{StaticResource Bt.Color.Code.Operator.Light}"/>
 </ResourceDictionary>

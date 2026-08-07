@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -128,6 +128,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Views\FilesWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="..\VersionInfo.cs">
+      <Link>Properties\VersionInfo.cs</Link>
+    </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -164,18 +171,33 @@
       <DependentUpon>Views\SessionWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Views\FilesWindow.xaml.cs">
+      <DependentUpon>Views\FilesWindow.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Views\CodeEditor.cs" />
     <Compile Include="Views\PaletteInputEventArgs.cs" />
     <Compile Include="Views\TerminalSurface.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Services\AppTheme.cs" />
     <Compile Include="Services\CommandRegistration.cs" />
+    <Compile Include="Services\FileKind.cs" />
     <Compile Include="Services\HostReachability.cs" />
+    <Compile Include="Services\OpenedFile.cs" />
     <Compile Include="Services\SelfInstall.cs" />
     <Compile Include="Services\ShellPresentation.cs" />
     <Compile Include="Services\StartupOptions.cs" />
     <Compile Include="Services\MotionPolicy.cs" />
     <Compile Include="Services\SystemPreference.cs" />
+    <Compile Include="Services\SyntaxCatalog.cs" />
+    <Compile Include="Services\SyntaxFamily.cs" />
+    <Compile Include="Services\SyntaxHighlighter.cs" />
+    <Compile Include="Services\SyntaxLanguage.cs" />
+    <Compile Include="Services\SyntaxState.cs" />
+    <Compile Include="Services\SyntaxToken.cs" />
     <Compile Include="Services\TerminalWorkspace.cs" />
+    <Compile Include="Services\TokenKind.cs" />
+    <Compile Include="Services\WorkspaceFiles.cs" />
     <Compile Include="Services\ThemeService.cs" />
     <Compile Include="ViewModels\AboutViewModel.cs" />
     <Compile Include="ViewModels\ColumnSplitViewModel.cs" />
@@ -184,6 +206,9 @@
     <Compile Include="ViewModels\WorkspaceSetupViewModel.cs" />
     <Compile Include="ViewModels\CommandItemViewModel.cs" />
     <Compile Include="ViewModels\CommandPaletteViewModel.cs" />
+    <Compile Include="ViewModels\FileDocumentViewModel.cs" />
+    <Compile Include="ViewModels\FileExplorerViewModel.cs" />
+    <Compile Include="ViewModels\FileNodeViewModel.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="ViewModels\ObservableObject.cs" />
     <Compile Include="ViewModels\PaneViewModel.cs" />

@@ -216,6 +216,15 @@
                         </StackPanel>
                     </Button>
                     <Button Margin="6,0,0,0" Style="{StaticResource Bt.Button.Chrome}"
+                            Command="{Binding OpenFilesCommand}"
+                            AutomationProperties.Name="Files in this folder"
+                            ToolTip="Files in this folder">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource Bt.Text.Icon}" Text="&#xE8DA;"/>
+                            <TextBlock Margin="7,0,0,0" VerticalAlignment="Center" Text="Files"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Margin="6,0,0,0" Style="{StaticResource Bt.Button.Chrome}"
                             Command="{Binding OpenWorkspaceSetupCommand}"
                             AutomationProperties.Name="Workspace setup"
                             ToolTip="Workspace setup">

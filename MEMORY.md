@@ -66,6 +66,169 @@ open threads below.
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
 
+### 2026-08-07 - Code is coloured, hand-built, because there is no editor library (1.3.0)
+
+**Context.** The user wanted code and structured files coloured the way an editor does it. The
+earlier decision stands - no package, so no AvalonEdit - which means the whole thing is written here.
+
+**Decision.** `RichTextBox` is the control. It is the only one in this framework that can be both
+edited and hold colour; a `TextBox` cannot colour anything and a drawn control cannot be edited
+without writing an editor. The price is that **a colour change is an edit like any other**, so the
+undo history contains steps the user never typed. That is the known cost of the no-package decision
+and it is not a bug to be chased.
+
+**Decision.** One paragraph per line, one run per coloured stretch, and the state left open at the
+end of a line (`SyntaxState`: normal, inside a block comment, inside an element) kept on the next
+paragraph in its `Tag`. Typing therefore re-reads **one line**; the lines below it are re-read only
+when that line changed what it leaves open - a comment marker typed, an element opened. Without that
+the viewer would re-read the whole file on every keystroke.
+
+**Decision.** Grammars are data, not code. `SyntaxLanguage` is where a comment starts, what quotes a
+string and which words are keywords, and one generic reader serves C#, C/C++, JavaScript and
+TypeScript, Java, Go, Rust, PHP, CSS, SQL, Python, PowerShell, shell and batch. Only two families
+carry structure in the text itself and get a reader of their own: **JSON**, where what separates the
+name of a member from a string value is the colon after it, and **markup**, where an element spans
+lines. A name that is not in the catalogue gets **no** colours rather than the wrong ones, and falls
+back to the plain box - guessing a grammar from the bytes is how a log ends up striped.
+
+**Decision.** Eight `Bt.Syntax.*` brushes, present in all three token tiers as the parity rule
+requires. Dark and light get their own hues, because the readable green for a comment on black is
+not the readable one on white; high contrast maps to system colours and invents nothing. Colouring
+stops above 512 KB - the view builds one element per coloured stretch, and a file too large to edit
+is never coloured either.
+
+**The trap.** Assigning `Document` in the constructor already raises a text change, so the handler
+ran before the timer it uses existed and every open of a code file killed the application. Build the
+fields a handler touches before anything that can raise one.
+
+**Verified.** C#, JSON, XAML, Python, C++ opened with the right colours and the right language named
+in the strip along the bottom. Typing into a Python file through the keyboard and pressing Ctrl+S
+wrote it back: 264 to 290 bytes, the typed line first, **line endings still LF and no byte order
+mark added**. Debug and Release both rebuild with zero errors and zero warnings.
+
+### 2026-08-07 - The Files window shows anything: pictures, any text encoding, and bytes for the rest (1.2.0)
+
+**Context.** The first version read every file as UTF-8 text, so a picture came out as noise, an old
+batch file came out with the accents scrambled, and anything binary was meaningless. The user asked
+for a viewer that can show everything.
+
+**Decision.** What a file *is* decides how it is shown, and the answer comes from reading it, not
+from its name. Three outcomes, and `OpenedFile` carries exactly one of them:
+
+- **A picture** when the extension is one WIC is expected to decode and the decode actually
+  succeeds. The list is only a filter - a missing codec or a name that lies falls through to the
+  dump instead of failing. It is decoded on the pool thread and **frozen**, which is what lets it
+  cross to the interface thread; shown `Uniform` with `StretchDirection="DownOnly"`, so a small
+  picture keeps its own size and a large one fits.
+- **Text** in the encoding it was actually written in: a byte order mark is taken at its word, a
+  file without one that decodes strictly as UTF-8 is UTF-8, and one that does not is read in the
+  machine's code page. That last arm is what makes a batch file written years ago on this computer
+  legible, and saving writes it back the same way rather than converting it.
+- **A dump** of the first 64 KB otherwise, in the usual three columns.
+
+**Decision.** A zero byte decides that a file is not text. It is the one reliable sign: text without
+a mark never contains one, and an executable or an archive reaches one almost immediately. UTF-16
+without a byte order mark is the known false negative, and it is rare enough to accept.
+
+**Decision.** Nothing is refused any more. A text file past the 2 MB editing limit is no longer an
+error message - it opens read-only, showing its beginning, and the strip along the bottom says so.
+Only editable text can be dirty, so a picture or a truncated log can never be saved over.
+
+**Verified.** Seventeen files opened through UI automation: `.js .log .xml .json .cs .cpp .py .ps1
+.txt`, a file with no extension, `.png .jpg .bmp`, a 2.9 MB log, and a blob with a zero byte in it -
+each reported the right kind. A genuine windows-1250 batch file was read as `windows-1250` and a
+UTF-16 file as `utf-16`. Debug and Release both rebuild with zero errors and zero warnings.
+
+### 2026-08-07 - One version for the whole application, and BUILD is staged after every change
+
+**Context.** Two things were true at once and both were wrong. The version number was written down
+in eight places and none of them agreed - the launcher said 1.0.1, the application 1.0.0, the wizard
+and the service 0.1.0, and `Interop` and `Terminal` had no version at all. And the copy under
+`%LOCALAPPDATA%\BetterTerminal\app` was decided per file by its timestamp and only ever received
+files matching `BetterTerminal*`, so the installed copy had **no banner, no wizard and no wrapper**
+in it. The user's standing instruction: build into `BUILD` after every change, wrapper included, and
+make the copy in AppData replace itself.
+
+**Decision.** `VersionInfo.cs` at the repository root is the one version, linked into all eight .NET
+projects (`<Compile Include="..\VersionInfo.cs"><Link>`), and the per-project `AssemblyVersion` and
+`AssemblyFileVersion` attributes are gone. The launcher is native and cannot link a `.cs` file, so
+its `Bootstrap.rc` still carries the number a second time - and `tools\build.ps1` **refuses to
+stage** when the two disagree, because that number is exactly what the installed copy compares
+against. Everything is now **1.1.0**.
+
+**Decision.** `SelfInstall` compares versions, not timestamps: a build carrying a higher version
+replaces the whole install folder, and at the same version the per-file timestamp still decides, so
+a rebuilt developer build still lands without bumping anything. The version of the installed copy is
+read with `FileVersionInfo` off the file rather than by loading the assembly, so a copy that is
+running is still readable. The file set now includes `beterm-*` as well as `BetterTerminal*`.
+
+**Decision.** `tools\build.ps1` is the command for every change: it builds `Release|x64` and stages
+`BUILD\` - the launcher, `app\` with `beterm-wrap.exe` in it (its own project, referenced by nothing,
+which is why it kept being forgotten), `service\`, the release layout in `dist\` and the zip. It
+never kills a process. A file that is running is left at its old version, named in a `WARNING:`
+block, and the script exits 2 - which is what happens in practice, because the user usually has
+`BUILD\BetterTerminal.exe` open while it runs. `dist\` takes its launcher from the build output
+rather than from `BUILD\`, so a release is never cut from a copy that could not be replaced.
+
+**The trap this immediately sprang, and the guard for it.** The launcher in `BUILD` could not be
+replaced while the user had it open, so it stayed at 1.0.1 **carrying its old embedded payload**.
+Running it unpacked the old application into a fresh temporary folder - where every file is newer by
+definition - and the timestamp rule then reinstalled 1.0.0 **over** the 1.1.0 copy under the user
+profile. The user saw an application without the feature that had just been built. `SelfInstall` now
+returns without touching anything when the installed version is higher than the running one; a build
+can only ever move that copy forward. Read the general lesson as: a stale one-file launcher is a
+carrier of the whole application, not just of an executable.
+
+**Verified.** Debug and Release both rebuild with zero errors and zero warnings. `tools\build.ps1`
+staged 26 files with both the launcher and `app\BetterTerminal.exe` at 1.1.0.0. Launching
+`BUILD\app\BetterTerminal.exe` once took the copy under the user profile from **1.0.0.0 with four
+files to 1.1.0.0 with seven** - the banner, the wizard and the wrapper among them - and the staged
+build was checked through UI automation to carry the Files button.
+
+### 2026-08-07 - A Files window: the folder as a tree, one file at a time in a plain editor (slice 1 of 4)
+
+**Context.** The shell could open a folder as a project but never show what was in it. The first of
+four planned slices: the tree, opening a file, editing it and Ctrl+S. Later slices add editor depth
+(highlighting, find, line endings), explorer depth (lazy loading, a watcher, a context menu) and
+session state (restored tabs, close prompts).
+
+**Decision.** No editor library. The user picked a plain `TextBox` over adding `AvalonEdit`, so the
+zero-package rule holds; the cost is that slice 2's highlighting and line numbers have to be built by
+hand on a custom control, and that is now the known limit of this feature. The editor also refuses a
+file over 2 MB (`WorkspaceFiles.MaximumFileBytes`) rather than freeze: the whole text is one string
+and the editor binds it back on every keystroke.
+
+**Decision.** Its own window, not a pane. The user asked for a separate form, so `Views/FilesWindow`
+follows the settings / connections / workspace-setup pattern - owned by the main window, modeless,
+one instance tracked in `_filesWindow`. Nothing about the pane tree, the session contract or the
+layout persistence changed.
+
+**Decision.** `Services/WorkspaceFiles.cs` is a new service, not code inside `TerminalWorkspace`. It
+does the listing, the reading and the writing on a pool thread and posts the result back through the
+dispatcher, exactly as `HostReachability` does; the view model stays state plus two events
+(`OpenRequested`, `SaveRequested`) and the workspace wires them. There is no `async`/`await` in the
+Shell and this did not introduce any.
+
+**What it does.** The root is the project folder, or the working directory of the focused session
+when the window was not opened in a project. Hidden folders are skipped, which is what keeps
+`.beterm` and a source-control database out of the tree. A file is read with its byte order mark
+detected and written back with the same encoding, so opening and saving does not add or remove one.
+The tree is built in full on first open - fine for a project, slow for a folder with a `node_modules`
+in it, and that is what slice 3's lazy loading is for.
+
+**Two things the run caught.** A tree row announced its view-model type to assistive technology,
+because the header is a panel and not a string - the same trap the saved-connections list hit; fixed
+with `AutomationProperties.Name` on the container in `Bt.FileRow`. And `TreeViewItem.IsMouseOver` is
+true while the mouse is over any *descendant*, so hovering a file lit up every folder above it; the
+hover trigger is on the row `Border` (`SourceName="Fill"`), not on the item.
+
+**Verified.** Debug and Release both rebuild with zero errors and zero warnings. Driven through UI
+automation against a scratch folder opened with `--project`: the tree came up expanded with the
+folder, its subfolder and its file (and no `.beterm`), selecting the file opened it with its text,
+replacing the text and pressing Ctrl+S wrote the new content to disk, and the process stayed alive.
+Note for anyone writing such a script: an owned window is **not** a child of `RootElement` in the
+automation tree - the first attempt concluded the window had never opened. Find it by handle.
+
 ### 2026-08-06 - A native C++ launcher carrying the whole app, and the wizard hands the console over cleanly
 
 **Context (two things in one run):** First, a bug: pressing Run in the CLI-AI Wizard froze the pane

@@ -77,6 +77,8 @@ namespace BetterTerminal.Shell.ViewModels
 
         public ICommand OpenWorkspaceSetupCommand { get; set; }
 
+        public ICommand OpenFilesCommand { get; set; }
+
         /// <summary>
         /// The project the shell was opened in, or empty for a plain launch. Shown in the status
         /// strip so it is always clear which folder the settings belong to.

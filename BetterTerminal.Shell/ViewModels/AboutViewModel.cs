@@ -8,7 +8,9 @@ namespace BetterTerminal.Shell.ViewModels
     {
         public AboutViewModel()
         {
-            VersionLine = "1.0.0";
+            // Design-time only; AssemblyVersion() replaces it with the real number when the
+            // window is opened. Both come from VersionInfo.cs in the end.
+            VersionLine = AssemblyVersion();
             Runtime = ".NET Framework";
             Backend = "Virtual terminal";
             HostOs = "Windows";

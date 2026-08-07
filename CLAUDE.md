@@ -34,6 +34,8 @@ Since 2026-08-05 the first run installs a copy of itself under `%LOCALAPPDATA%\B
 ## Session contract
 - Start: read RULES.md and MEMORY.md#current-state before proposing changes.
 - During: prefer the commands in [WORKFLOWS.md](WORKFLOWS.md#daily-development); do not invent commands.
+- After every finished change: run `tools\build.ps1`, which builds and stages `BUILD\` (launcher, `app\` with the wrapper, `service\`, `dist\`, the zip). A change that is not in `BUILD\` is not delivered. See [WORKFLOWS.md](WORKFLOWS.md#daily-development).
+- One version for the whole application, in `VersionInfo.cs` and mirrored in `BetterTerminal.Bootstrap\Bootstrap.rc`. Raise it and the copy under `%LOCALAPPDATA%` replaces itself on the next launch.
 - End: append anything decided or learned to [MEMORY.md](MEMORY.md#decision-log). This is what makes the next session cheap.
 - No git write operation (commit, push, merge, rebase, reset, tag, PR) unless the user names it in the same run; read-only git is fine. See [RULES.md](RULES.md#git-rules).
 - No external API or package name (ConPTY, conhost, WPF, Win32) in user-visible UI text; code comments and docs only. See [RULES.md](RULES.md#never-do).

@@ -34,6 +34,40 @@ There is **no restore step and nothing to install** — unusual, and deliberate:
 
 ## Daily development
 
+### Build into BUILD after every change (the standing rule)
+
+**When:** after every change that is finished · **Takes:** about 60 s · **Needs:** nothing set
+
+1. `.\tools\build.ps1` - builds `Release|x64` and stages `BUILD\`: the one-file launcher, `app\` **including `beterm-wrap.exe`**, `service\`, the release layout in `dist\` and `BetterTerminal-x64.zip`
+2. `.\tools\build.ps1 -Configuration Debug -SkipZip` - the same staging from a Debug build
+3. `.\tools\build.ps1 -Rebuild` - forces a clean rebuild first
+
+The script refuses to stage when `VersionInfo.cs` and the launcher's own resource in
+`BetterTerminal.Bootstrap\Bootstrap.rc` disagree, because the copy under the user profile compares
+against that number. It never kills anything: a file that is running right now is left at its old
+version, named in a `WARNING:` block, and the script exits **2** - close the application and run it
+again.
+
+**Verify:** the last lines read `RESULT: BetterTerminal <version> staged in BUILD` with `launcher:`
+and `app:` both showing that version, and no `WARNING:` block.
+
+**If it fails:**
+- `VersionInfo.cs says X but the launcher resource says Y` - bump both; they are the only two places a version is written down.
+- `WARNING: ... BUILD\BetterTerminal.exe` - that launcher is open; close it and run again.
+
+### Release a new version
+
+**When:** the version should change · **Takes:** a minute
+
+1. Edit the three attributes in `VersionInfo.cs` at the repository root - every project links it
+2. Edit `FILEVERSION`, `PRODUCTVERSION`, `FileVersion` and `ProductVersion` in `BetterTerminal.Bootstrap\Bootstrap.rc` to match
+3. `.\tools\build.ps1`
+
+**Verify:** `(Get-Item .\BUILD\app\BetterTerminal.exe).VersionInfo.FileVersion` is the new number,
+and after launching it once `(Get-Item "$env:LOCALAPPDATA\BetterTerminal\app\BetterTerminal.exe").VersionInfo.FileVersion`
+is the new number too - the copy under the user profile replaces itself when the build it is
+launched from carries a higher version.
+
 ### Build Debug and run the app
 
 **When:** every edit-run cycle · **Takes:** about 15 s incremental, 40 s clean · **Needs:** `$msbuild` set
@@ -51,15 +85,16 @@ There is **no restore step and nothing to install** — unusual, and deliberate:
 
 **When:** working on a specific folder · **Takes:** seconds · **Needs:** the app to have been launched at least once since the build
 
-Every start copies the executable and its two DLLs into `%LOCALAPPDATA%\BetterTerminal\app`
-(refreshing whatever the running build is newer than), writes
+Every start copies the application, its libraries and the `beterm-*` helper programs into
+`%LOCALAPPDATA%\BetterTerminal\app` - replacing the lot when the build being launched carries a
+higher version, and otherwise refreshing whatever it is newer than - writes
 `%LOCALAPPDATA%\BetterTerminal\bin\beterm.cmd` next to it and joins that folder to the per-user
 search path. **`beterm` always runs the installed copy**, so the build output directory can be
 deleted or moved without breaking the command - and the last build you launch is the one that gets
 installed.
 
 1. `Start-Process ".\BetterTerminal.Shell\bin\x64\Release\BetterTerminal.exe"` - one launch installs the copy and registers the command; close it again
-2. `Get-ChildItem "$env:LOCALAPPDATA\BetterTerminal\app"` - three files, timestamped from the build you just ran
+2. `Get-ChildItem "$env:LOCALAPPDATA\BetterTerminal\app"` - the application, its libraries and the helper programs, all carrying the version of the build you just ran
 3. Open a **new** prompt (the search path is only re-read by processes started after the change) and type `beterm` in any folder
 
 **Verify:** the window opens with one tab whose working directory is that folder, the status strip

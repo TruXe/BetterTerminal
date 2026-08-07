@@ -2,6 +2,15 @@
 
 A Windows terminal that opens on the folder you are working in.
 
+| | |
+| --- | --- |
+| **Version** | 1.3.0 · BETA |
+| **Download** | [`BetterTerminal-x64.zip`](../../releases/latest) |
+| **Runs on** | 64-bit Windows 10 / 11 with .NET Framework 4.8 |
+| **Built with** | .NET Framework 4.8 · WPF · direct Win32 interop |
+| **Dependencies** | none - **zero NuGet packages**, builds offline with MSBuild alone |
+| **Licence** | [MIT](LICENSE) |
+
 Type `beterm` at any command prompt and BetterTerminal opens there, treats that folder as a project,
 and remembers what you set up for it. Command Prompt and Windows PowerShell run in tabs and splits
 in one window, with your own commands, your saved remote connections and your layout kept between
@@ -9,8 +18,11 @@ runs.
 
 ![The application with a project open](docs/images/betterterminal.png)
 
-Built for .NET Framework 4.8 with WPF and direct Win32 interop. No third-party terminal control and
-**no NuGet packages at all** - a clean clone builds with MSBuild alone, offline.
+## Special thanks
+
+| Contributor | For |
+| --- | --- |
+| **[Deerpfy](https://github.com/Deerpfy)** | The `ai.bat` launcher the CLI-AI Wizard is ported from - the guided flow that builds a command line for Claude, Codex, Gemini or Antigravity. |
 
 ## Install
 
@@ -29,10 +41,34 @@ Needs 64-bit Windows and .NET Framework 4.8, which is already on Windows 10 and 
 
 ## What you get
 
+| Feature | What it does |
+| --- | --- |
+| **Folder as a project** | `beterm` opens the application in that folder, with its settings in a hidden `.beterm` folder. |
+| **Files** | A folder tree and a viewer for anything in it: code with colours, pictures, and a byte dump for the rest. |
+| **Tabs and splits** | Split any pane right or down, as deep as you like. Every pane has its own shell and directory. |
+| **Saved connections** | An address book behind the SSH button, with a reachability heart per host. |
+| **Command palette** | `Ctrl+Shift+P` for every layout command and the commands you defined for the project. |
+| **CLI-AI Wizard** | A guided flow that assembles a command line for Claude, Codex, Gemini or Antigravity. |
+| **Layout that survives** | Tabs, splits, ratios, shells, directories, theme, font and window position are restored. |
+| **A real terminal** | Truecolour, scrollback, selection, copy and paste, `Ctrl+wheel` zoom, alternate screen buffer. |
+
 **Open a folder as a project.** `beterm` in any folder opens the application there. The folder gets
 a hidden `.beterm` folder holding its settings: a name, which shell to use, a line to run when it
 opens, commands you define yourself, and any values you want to keep with the project. Your own
 commands appear in the command palette and run in the focused session.
+
+**Files.** The Files button opens the folder as a tree beside a viewer, and what a file *is* decides
+how it is shown - not what its name claims:
+
+| Kind | How it is shown |
+| --- | --- |
+| Code and structured text | Coloured by language: C#, C/C++, JavaScript and TypeScript, Java, Go, Rust, PHP, CSS, SQL, Python, PowerShell, shell, batch, **JSON** and **markup** (XML, XAML, HTML, SVG, project files). |
+| Plain text | In the encoding it was actually written in - a byte order mark is believed, and a file without one that is not UTF-8 is read in the machine's code page. `Ctrl+S` writes it back the same way, same line endings, no mark added. |
+| Pictures | `.png .jpg .gif .bmp .tif .ico .webp .heic .avif` and anything else Windows has a decoder for. |
+| Anything else | A dump of its first bytes, in offset, hex and characters. |
+
+A file too large to hold opens read-only instead of being refused, and a name in no known language
+gets no colours rather than the wrong ones.
 
 **A session that tells you where you are.** Each pane opens on a short banner naming the workspace,
 the project, the shell and the machine, and the prompt reads `MACHINE /project/folder >>`.
@@ -69,15 +105,17 @@ exit code instead of going blank.
 | `Ctrl+Shift+C` / `Ctrl+Shift+V` | Copy / paste |
 | `Shift+PageUp` / `Shift+PageDown` | Scroll back / forward |
 | `Ctrl+wheel` | Font size |
+| `Ctrl+S` | Save the open file - in the Files window |
 
 ## Also in the box
 
-Two small console programs ship beside the application:
-
-- **`beterm-banner.exe`** writes the banner a session opens on. The shell runs it as its first
-  command; it is installed next to the `beterm` command.
-- **`beterm-wrap.exe`** is a text interface for the PowerShell scripts in `tools\`: pick one, fill
-  in its parameters, watch its output and see the exit code it really returned.
+| Program | What it is for |
+| --- | --- |
+| `BetterTerminal.exe` (root of the zip) | The one-file launcher: it carries the whole application, unpacks it to a private temporary folder, runs it and cleans up. Arguments are passed through. |
+| `app\beterm-banner.exe` | Writes the banner a session opens on. The shell runs it as its first command. |
+| `app\beterm-wrap.exe` | A text interface for the PowerShell scripts in `tools\`: pick one, fill in its parameters, watch its output and see the exit code it really returned. |
+| `app\beterm-aiwizard.exe` | The CLI-AI Wizard, also reachable from the shell picker beside Command Prompt and PowerShell. Ported from Deerpfy's `ai.bat`. |
+| `service\beterm-service.exe` | The optional "BetterTerminal Host" Windows service. Installing it is machine-wide and needs an elevated prompt: `beterm-service.exe --install`. The application itself never elevates. |
 
 ## Build it yourself
 
@@ -101,6 +139,10 @@ that is what the [build workflow](.github/workflows/build.yml) enforces on every
 | `BetterTerminal.Shell` | The application: window, tabs, splits, panes, palette, settings, persistence. |
 | `BetterTerminal.Wrap` | `beterm-wrap.exe`, the text interface for the verification scripts. |
 | `BetterTerminal.Banner` | `beterm-banner.exe`, the session banner. |
+| `BetterTerminal.AIWizard` | The wizard's logic as a library: the agents, the menus and the command it composes. No UI. |
+| `BetterTerminal.AIWizard.Cli` | `beterm-aiwizard.exe`, the wizard you can open in a pane. |
+| `BetterTerminal.Service` | `beterm-service.exe`, the optional Windows service host. |
+| `BetterTerminal.Bootstrap` | The one-file launcher, in C++. It carries the whole application and unpacks it to run. |
 
 Deeper documentation lives at the repository root: [STRUCTURE.md](STRUCTURE.md) for the code map,
 [WORKFLOWS.md](WORKFLOWS.md) for runnable procedures, [RULES.md](RULES.md) for the constraints the
@@ -124,6 +166,9 @@ no telemetry.
 
 - **No test project.** Verification is a warning-clean rebuild plus the scripts in `tools\`.
 - **Not code signed**, so Windows will warn the first time you run it.
+- The code view is built on the framework's own rich text control, because the no-package rule rules
+  out an editor library. A colour change is an edit like any other there, so the undo history in the
+  Files window holds steps you did not type.
 - Full-screen console applications, a DPI change while running and input latency have not been
   checked by hand.
 - The relative `/project/folder` prompt works in Windows PowerShell. Command Prompt shows the full

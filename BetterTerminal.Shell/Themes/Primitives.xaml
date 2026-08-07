@@ -49,6 +49,26 @@
     <Color x:Key="Bt.Color.Overlay.AccentWashLight">#2EE4A130</Color>
     <Color x:Key="Bt.Color.Scrim">#57000000</Color>
 
+    <!-- Code colours. Two sets, because the readable hue for a comment on a dark background is not
+         the readable one on a light background; high contrast takes the system colours instead. -->
+    <Color x:Key="Bt.Color.Code.Comment.Dark">#FF6A9955</Color>
+    <Color x:Key="Bt.Color.Code.String.Dark">#FFCE9178</Color>
+    <Color x:Key="Bt.Color.Code.Number.Dark">#FFB5CEA8</Color>
+    <Color x:Key="Bt.Color.Code.Keyword.Dark">#FF569CD6</Color>
+    <Color x:Key="Bt.Color.Code.Tag.Dark">#FF4EC9B0</Color>
+    <Color x:Key="Bt.Color.Code.Attribute.Dark">#FF9CDCFE</Color>
+    <Color x:Key="Bt.Color.Code.Property.Dark">#FFDCDCAA</Color>
+    <Color x:Key="Bt.Color.Code.Operator.Dark">#FFC586C0</Color>
+
+    <Color x:Key="Bt.Color.Code.Comment.Light">#FF107C10</Color>
+    <Color x:Key="Bt.Color.Code.String.Light">#FFA31515</Color>
+    <Color x:Key="Bt.Color.Code.Number.Light">#FF098658</Color>
+    <Color x:Key="Bt.Color.Code.Keyword.Light">#FF0000C0</Color>
+    <Color x:Key="Bt.Color.Code.Tag.Light">#FF0F6D68</Color>
+    <Color x:Key="Bt.Color.Code.Attribute.Light">#FF1F5EA8</Color>
+    <Color x:Key="Bt.Color.Code.Property.Light">#FF795E26</Color>
+    <Color x:Key="Bt.Color.Code.Operator.Light">#FF8B2E8B</Color>
+
     <!-- Geometry / metric scalars (DIPs). -->
     <sys:Double x:Key="Bt.Size.TitleBarHeight">40</sys:Double>
     <sys:Double x:Key="Bt.Size.TabHeight">34</sys:Double>

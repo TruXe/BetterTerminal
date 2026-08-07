@@ -37,6 +37,9 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\VersionInfo.cs">
+      <Link>Properties\VersionInfo.cs</Link>
+    </Compile>
     <Compile Include="ConsoleWindowStyles.cs" />
     <Compile Include="Coord.cs" />
     <Compile Include="EnumWindowsProc.cs" />

@@ -191,6 +191,25 @@
         <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Mono}"/>
     </Style>
 
+    <!-- A whole file, not a field: it keeps the stock template, which is the one that scrolls. -->
+    <Style x:Key="Bt.TextBox.Editor" TargetType="TextBox">
+        <Setter Property="FontFamily" Value="{DynamicResource Bt.Font.Mono}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Mono}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Bt.TerminalBackgroundBrush}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource Bt.AccentFillDefaultBrush}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource Bt.AccentFillDefaultBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Bt.StrokeSubtleBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="10,8,10,8"/>
+        <Setter Property="AcceptsReturn" Value="True"/>
+        <Setter Property="AcceptsTab" Value="True"/>
+        <Setter Property="TextWrapping" Value="NoWrap"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="SpellCheck.IsEnabled" Value="False"/>
+    </Style>
+
     <!-- ===== ComboBox ===== -->
     <Style x:Key="Bt.ComboBox.ToggleButton" TargetType="ToggleButton">
         <Setter Property="Template">
@@ -502,6 +521,96 @@
                             <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillPrimaryBrush}"/>
                             <Setter Property="FontWeight" Value="SemiBold"/>
                             <Setter Property="Height" Value="{DynamicResource Bt.Size.TabHeight}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Applied to the code view, which derives from this type. -->
+    <Style x:Key="Bt.CodeEditor" TargetType="RichTextBox">
+        <Setter Property="FontFamily" Value="{DynamicResource Bt.Font.Mono}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.Mono}"/>
+        <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillPrimaryBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource Bt.TerminalBackgroundBrush}"/>
+        <Setter Property="CaretBrush" Value="{DynamicResource Bt.AccentFillDefaultBrush}"/>
+        <Setter Property="SelectionBrush" Value="{DynamicResource Bt.AccentFillDefaultBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource Bt.StrokeSubtleBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="10,8,10,8"/>
+        <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
+        <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
+    </Style>
+
+    <!-- ===== Folder tree ===== -->
+    <Style x:Key="Bt.TreeView.Expander" TargetType="ToggleButton">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border Background="Transparent">
+                        <TextBlock x:Name="Glyph" Text="&#xE76C;"
+                                   FontFamily="{DynamicResource Bt.Font.Icon}" FontSize="9"
+                                   Foreground="{DynamicResource Bt.TextFillTertiaryBrush}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Glyph" Property="Text" Value="&#xE70D;"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Bt.TextFillPrimaryBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="Bt.TreeViewItem" TargetType="TreeViewItem">
+        <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillPrimaryBrush}"/>
+        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
+        <Setter Property="FocusVisualStyle" Value="{StaticResource Bt.FocusVisual}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TreeViewItem">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Border x:Name="Fill" Grid.Row="0" Height="26" Padding="2,0,8,0"
+                                Background="Transparent"
+                                CornerRadius="{DynamicResource Bt.Radius.Control}">
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton x:Name="Expander"
+                                              Style="{StaticResource Bt.TreeView.Expander}"
+                                              ClickMode="Press"
+                                              IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                <ContentPresenter ContentSource="Header" Margin="4,0,0,0"
+                                                  VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <!-- The children carry the indentation; the row above never moves. -->
+                        <ItemsPresenter x:Name="Items" Grid.Row="1" Margin="16,0,0,0"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="False">
+                            <Setter TargetName="Items" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="HasItems" Value="False">
+                            <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
+                        </Trigger>
+                        <!-- On the row, not on the item: an item is "under the mouse" while any
+                             of its children is, which would light up every folder above it. -->
+                        <Trigger SourceName="Fill" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Bt.ControlFillPointerOverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Bt.AccentWashBrush}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

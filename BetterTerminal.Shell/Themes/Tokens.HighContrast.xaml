@@ -1,4 +1,4 @@
-<!-- Tier 2 (DS-02): semantic brushes. High contrast - every key maps to a SystemColors key (BP-R27).
+﻿<!-- Tier 2 (DS-02): semantic brushes. High contrast - every key maps to a SystemColors key (BP-R27).
      Every key here exists with the same name in every sibling Tokens.*.xaml (DS-04 parity). -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -46,4 +46,14 @@
 
     <SolidColorBrush x:Key="Bt.FocusStrokeOuterBrush" Color="{x:Static SystemColors.WindowTextColor}"/>
     <SolidColorBrush x:Key="Bt.FocusStrokeInnerBrush" Color="{x:Static SystemColors.WindowColor}"/>
+
+    <!-- Code (DS-04 parity). High contrast never invents a hue (BP-R27). -->
+    <SolidColorBrush x:Key="Bt.Syntax.CommentBrush" Color="{x:Static SystemColors.GrayTextColor}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.StringBrush" Color="{x:Static SystemColors.HotTrackColor}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.NumberBrush" Color="{x:Static SystemColors.HotTrackColor}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.KeywordBrush" Color="{x:Static SystemColors.HighlightColor}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.TagBrush" Color="{x:Static SystemColors.HighlightColor}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.AttributeBrush" Color="{x:Static SystemColors.HotTrackColor}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.PropertyBrush" Color="{x:Static SystemColors.WindowTextColor}"/>
+    <SolidColorBrush x:Key="Bt.Syntax.OperatorBrush" Color="{x:Static SystemColors.WindowTextColor}"/>
 </ResourceDictionary>

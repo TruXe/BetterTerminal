@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -31,6 +32,7 @@ namespace BetterTerminal.Shell.Services
         private readonly SettingsViewModel _settings = new SettingsViewModel();
 
         private SettingsWindow _settingsWindow;
+        private FilesWindow _filesWindow;
         private string _projectDirectory;
         private PersistedProject _project;
 
@@ -55,6 +57,7 @@ namespace BetterTerminal.Shell.Services
             _model.FocusPreviousPaneCommand = new ShellCommand(delegate { FocusNextPane(-1); });
             _model.OpenConnectionsCommand = new ShellCommand(OpenConnections);
             _model.OpenWorkspaceSetupCommand = new ShellCommand(OpenWorkspaceSetup);
+            _model.OpenFilesCommand = new ShellCommand(OpenFiles);
 
             _settings.Changed += OnSettingsChanged;
             ThemeService.Current.ThemeChanged += OnThemeChanged;
@@ -898,6 +901,7 @@ namespace BetterTerminal.Shell.Services
                 Command("Open settings", "Application", "\uE713", "Ctrl+comma", OpenSettings),
                 Command("Saved connections", "Application", "\uE8AF", "", OpenConnections),
                 Command("Workspace setup", "Application", "\uE8B7", "", OpenWorkspaceSetup),
+                Command("Files", "Application", "\uE8DA", "", OpenFiles),
                 Command("About BetterTerminal", "Application", "\uE946", "", OpenAbout),
                 Command("Open workspace folder", "Application", "\uE8E5", "", OpenWorkspaceFile)
             };
@@ -991,6 +995,105 @@ namespace BetterTerminal.Shell.Services
             window.Owner = _owner;
             window.DataContext = about;
             window.ShowDialog();
+        }
+
+        /// <summary>
+        /// The files of the folder this window was opened in - the project when there is one, and
+        /// otherwise the directory the focused session is sitting in.
+        /// </summary>
+        private void OpenFiles()
+        {
+            if (_filesWindow != null)
+            {
+                _filesWindow.Activate();
+                return;
+            }
+
+            FileExplorerViewModel model = new FileExplorerViewModel();
+            model.OpenRequested += delegate { OpenFile(model); };
+            model.SaveRequested += delegate { SaveFile(model); };
+
+            _filesWindow = new FilesWindow();
+            _filesWindow.Owner = _owner;
+            _filesWindow.DataContext = model;
+            _filesWindow.Closed += delegate { _filesWindow = null; };
+            _filesWindow.Show();
+
+            string directory = string.IsNullOrEmpty(_projectDirectory)
+                ? WorkingDirectoryForNewSession()
+                : _projectDirectory;
+
+            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            {
+                model.Message = "There is no folder to show yet.";
+                return;
+            }
+
+            model.RootPath = directory;
+            model.Message = "Reading " + directory;
+
+            WorkspaceFiles.Scan(directory, delegate(FileNodeViewModel root)
+            {
+                model.SetRoot(root);
+                model.Message = root == null
+                    ? "That folder could not be read."
+                    : "Pick a file on the left to open it.";
+            });
+        }
+
+        private void OpenFile(FileExplorerViewModel model)
+        {
+            FileNodeViewModel node = model.SelectedNode;
+            if (node == null || node.IsDirectory)
+            {
+                return;
+            }
+
+            FileDocumentViewModel already = model.Find(node.FullPath);
+            if (already != null)
+            {
+                model.SelectedDocument = already;
+                return;
+            }
+
+            FileDocumentViewModel document = new FileDocumentViewModel(node.FullPath);
+            document.CloseCommand = new ShellCommand(delegate { model.Close(document); });
+            model.Documents.Add(document);
+            model.SelectedDocument = document;
+            model.Message = "Opening " + node.Name;
+
+            WorkspaceFiles.Open(node.FullPath,
+                delegate(OpenedFile opened)
+                {
+                    document.Show(opened);
+                    model.Message = document.FullPath;
+                },
+                delegate(string error)
+                {
+                    // The tab was opened optimistically; a file that will not load must not
+                    // leave an empty one behind that a save could then write over it.
+                    model.Close(document);
+                    model.Message = error;
+                });
+        }
+
+        private void SaveFile(FileExplorerViewModel model)
+        {
+            FileDocumentViewModel document = model.SelectedDocument;
+            if (document == null || !document.IsDirty || document.IsReadOnly)
+            {
+                return;
+            }
+
+            model.Message = "Saving " + document.Name;
+
+            WorkspaceFiles.Write(document.FullPath, document.Text, document.Encoding,
+                delegate
+                {
+                    document.MarkSaved();
+                    model.Message = "Saved " + document.FullPath;
+                },
+                delegate(string error) { model.Message = error; });
         }
 
         private void OpenWorkspaceFile()
