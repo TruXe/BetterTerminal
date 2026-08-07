@@ -149,6 +149,12 @@ enforces them.
   where `<area>` is `interop`, `terminal`, `shell`, `tools` or `docs`. Optional body wrapped at 72. No
   emoji, no trailing period, English only.
 - **[convention] A commit must build clean** in both `Debug|x64` and `Release|x64`, zero warnings (R4).
+- **[enforced by .github/workflows/build.yml] A published version is a Release, never a pre-release.**
+  The publish step creates with `--latest` and corrects an existing one with
+  `gh release edit $tag --prerelease=false --latest`. Adding `--prerelease` back is a regression: a
+  pre-release is hidden from the repository's latest-release link, which is the download link the
+  README points at. The BETA wording in the notes describes the software, not the release flag.
+  Standing user instruction, [MEMORY.md#decision-log](MEMORY.md#decision-log).
 - **[enforced by .gitignore] Never committed:** `bin/`, `obj/`, `.vs/`, `*.user`, `*.suo`, and the
   generated 10 MB payload `docs/_archive/*/flood.txt` produced by `tools/flood-benchmark.ps1`.
 - **[convention] Also never committed:** screenshots and `.log` files produced by `tools/`, and any
