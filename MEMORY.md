@@ -13,6 +13,12 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-08 (1.4.2).** The service now updates and notifies on its own when nothing of ours
+is running: it shows a message in the user's session with `WTSSendMessage` and installs the update
+there with `CreateProcessAsUser`, so an update lands even with the application closed. The
+application's own corner notice still handles the running case. README carries shields.io badges. The
+newest [decision-log](#decision-log) entry has the detail.
+
 **Update 2026-08-08 (1.4.1).** Self-update from the latest GitHub release, driven by the Windows
 service and shown as a corner notice in the application's own style; panes and the two tools dock by
 dragging their header; a fine terminal scrollbar; splitter minimums. The newest
@@ -91,6 +97,31 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-08 - The service updates and notifies on its own when the application is closed (1.4.2)
+
+**Context.** The user wanted the update to happen through the service even when BetterTerminal is not
+running, with a notice shown - purely by the service.
+
+**The truth this rests on.** A service is in session 0 and cannot draw a window on the interactive
+desktop; only a process in the user's session can. So "purely by the service" has two supported
+routes, and neither is the application's own styled window: `WTSSendMessage` puts a plain system
+message box in the active session, and `CreateProcessAsUser` starts a process there with the user's
+token. The service uses the first to notify and the second to install - the launcher must run with
+the user's token or it would unpack into the service account's profile and `%LOCALAPPDATA%` would
+point at the wrong place.
+
+**Decision.** The service acts on its own only when nothing of ours is running
+(`Process.GetProcessesByName`). When the application is up, the notice and the apply stay its own,
+over the pipe, so a live session is never disturbed. When it is closed, the service shows the message
+and starts the staged launcher in the user's session; the application opening updated is the visible
+result. The staged record is cleared after a successful apply so the next poll does not repeat it.
+
+**Not verified here.** The `WTSSendMessage` and `CreateProcessAsUser` paths need the service running
+as LocalSystem in session 0 and cannot be exercised from this environment. Offline, the check and
+staging still work after the refactor, and both configurations build zero-warning under
+`/warnaserror`. The notice is the system message box by design; the application's corner window is
+the styled one and needs the running application.
 
 ### 2026-08-08 - The application updates itself from the latest release, driven by the service
 

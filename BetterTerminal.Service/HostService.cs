@@ -23,8 +23,6 @@ namespace BetterTerminal.Service
         internal const string Description =
             "Background host for BetterTerminal helper components. Runs without a window.";
 
-        private const string LogSource = "BetterTerminal Host";
-
         private UpdateSignal _signal;
         private Timer _poll;
 
@@ -89,12 +87,58 @@ namespace BetterTerminal.Service
                 {
                     _signal.SetAvailable(found);
                     Log("Staged update " + UpdateShared.NormalizedString(found) + ".");
+                    ApplyIfNothingIsRunning(found);
                 }
             }
             catch (Exception error)
             {
                 // A failed check must not take the service down; the next poll tries again.
                 Log("Update check failed: " + error.Message);
+            }
+        }
+
+        /// <summary>
+        /// When the application is running the notice and the apply are its own, over the pipe, so a
+        /// live session is never disturbed. When nothing of ours is on the desktop the service is the
+        /// only one that can act: it shows a message in the user's session and installs the update
+        /// there itself. The application opening is the visible result of the update.
+        /// </summary>
+        private void ApplyIfNothingIsRunning(Version version)
+        {
+            if (ApplicationIsRunning())
+            {
+                return;
+            }
+
+            string launcher = UpdateShared.ReadStagedLauncher(version);
+            if (launcher == null)
+            {
+                return;
+            }
+
+            SessionNotice.Show("BetterTerminal update",
+                "Installing version " + UpdateShared.NormalizedString(version) + ".");
+
+            if (SessionLauncher.Run(launcher))
+            {
+                // Applied: clear the record so the next poll does not run it again before the updated
+                // application has written its own installed version.
+                UpdateShared.ClearStaged();
+                Log("Installed update " + UpdateShared.NormalizedString(version) + " in the user session.");
+            }
+        }
+
+        private static bool ApplicationIsRunning()
+        {
+            try
+            {
+                return Process.GetProcessesByName("BetterTerminal").Length > 0;
+            }
+            catch (InvalidOperationException)
+            {
+                // The process list could not be read; treat that as "running" so the service does
+                // not apply an update under an application it simply could not see.
+                return true;
             }
         }
 
@@ -115,19 +159,7 @@ namespace BetterTerminal.Service
 
         private static void Log(string message)
         {
-            try
-            {
-                if (!EventLog.SourceExists(LogSource))
-                {
-                    EventLog.CreateEventSource(LogSource, "Application");
-                }
-
-                EventLog.WriteEntry(LogSource, message, EventLogEntryType.Information);
-            }
-            catch (Exception)
-            {
-                // Logging is best effort: the host must run whether or not the log can be written.
-            }
+            ServiceLog.Write(message);
         }
     }
 }

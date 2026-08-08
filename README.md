@@ -2,9 +2,16 @@
 
 A Windows terminal that opens on the folder you are working in.
 
+[![Version](https://img.shields.io/badge/version-1.4.2%20BETA-blue)](../../releases/latest)
+[![Download](https://img.shields.io/badge/download-BetterTerminal.exe-success)](../../releases/latest)
+![Platform](https://img.shields.io/badge/Windows-10%20%7C%2011%20x64-0078D6)
+![.NET Framework](https://img.shields.io/badge/.NET%20Framework-4.8-512BD4)
+![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen)
+[![Licence](https://img.shields.io/badge/licence-MIT-green)](LICENSE)
+
 | | |
 | --- | --- |
-| **Version** | 1.4.0 · BETA |
+| **Version** | 1.4.2 · BETA |
 | **Download** | [`BetterTerminal.exe`](../../releases/latest) - one file, nothing to unpack |
 | **Runs on** | 64-bit Windows 10 / 11 with .NET Framework 4.8 |
 | **Built with** | .NET Framework 4.8 · WPF · direct Win32 interop |

@@ -51,6 +51,9 @@
     <Compile Include="Program.cs" />
     <Compile Include="ReleaseFeed.cs" />
     <Compile Include="ServiceControl.cs" />
+    <Compile Include="ServiceLog.cs" />
+    <Compile Include="SessionLauncher.cs" />
+    <Compile Include="SessionNotice.cs" />
     <Compile Include="UpdateCheck.cs" />
     <Compile Include="UpdateDownloader.cs" />
     <Compile Include="UpdateSignal.cs" />
