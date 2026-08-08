@@ -26,7 +26,11 @@ namespace BetterTerminal.Shell.Services
         public const long MaximumImageBytes = 64L * 1024 * 1024;
 
         /// <summary>Above this a text file is shown without colours, because colouring it is slow.</summary>
-        public const long MaximumColouredBytes = 512L * 1024;
+        /// <summary>
+        /// Kept as the name the rest of the code knows, and tied to the editable limit so the two
+        /// cannot drift apart again: a file that opens for editing opens with its colours.
+        /// </summary>
+        public const long MaximumColouredBytes = MaximumEditableBytes;
 
         /// <summary>
         /// How much of a file is read to decide what it is, and how much of one that turns out to
@@ -141,11 +145,10 @@ namespace BetterTerminal.Shell.Services
             {
                 bool editable = info.Length <= MaximumEditableBytes;
 
-                // Colouring builds one element per coloured stretch, so a very large file is left
-                // plain rather than made slow - and a file too large to edit is never coloured.
-                SyntaxLanguage language = editable && info.Length <= MaximumColouredBytes
-                    ? SyntaxCatalog.For(path)
-                    : null;
+                // One rule, so it explains itself: what can be edited is coloured. The two limits
+                // used to differ, which left a band of files that opened for editing with no
+                // colours and nothing on screen saying why.
+                SyntaxLanguage language = editable ? SyntaxCatalog.For(path) : null;
 
                 opened.SetText(ReadText(path, encoding, editable), encoding, editable, language);
                 return opened;

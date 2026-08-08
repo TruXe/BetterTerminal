@@ -15,6 +15,10 @@ namespace BetterTerminal.Shell
         [DataMember(Name = "tabs")]
         public List<PersistedTab> Tabs { get; set; }
 
+        /// <summary>Panes that were torn off into windows of their own. Null on an older file.</summary>
+        [DataMember(Name = "floating")]
+        public List<PersistedFloating> Floating { get; set; }
+
         [DataMember(Name = "theme")]
         public string Theme { get; set; }
 

@@ -105,5 +105,8 @@ namespace BetterTerminal.Shell.ViewModels
         }
 
         public ICommand RemoveCommand { get; set; }
+
+        /// <summary>Opens this connection without having to select it first.</summary>
+        public ICommand ConnectCommand { get; set; }
     }
 }

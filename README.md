@@ -4,7 +4,7 @@ A Windows terminal that opens on the folder you are working in.
 
 | | |
 | --- | --- |
-| **Version** | 1.3.0 · BETA |
+| **Version** | 1.4.0 · BETA |
 | **Download** | [`BetterTerminal.exe`](../../releases/latest) - one file, nothing to unpack |
 | **Runs on** | 64-bit Windows 10 / 11 with .NET Framework 4.8 |
 | **Built with** | .NET Framework 4.8 · WPF · direct Win32 interop |
@@ -34,14 +34,23 @@ runs, and clears the folder away when you close it. There is nothing to unpack b
 left lying around.
 
 The first run also copies the application to `%LOCALAPPDATA%\BetterTerminal\app` and registers the
-`beterm` command - no installer, no administrator rights, nothing written outside your user profile.
-That copy is what `beterm` starts, so it keeps working after the temporary folder is gone. Open a
-**new** prompt afterwards, because a prompt only reads the search path when it starts.
+`beterm` command - no installer, no administrator rights for that part. That copy is what `beterm`
+starts, so it keeps working after the temporary folder is gone. Open a **new** prompt afterwards,
+because a prompt only reads the search path when it starts.
+
+**Windows will ask for administrator rights once.** The first run registers the *BetterTerminal
+Host* service, and a service lives in the machine's service database rather than in your profile.
+That is the only thing here that leaves your user profile and the only prompt you will see. It is
+asked **once**: refuse it and the application runs perfectly well without the service and never asks
+again. To change your mind later, run `beterm-service.exe --install` (or `--uninstall`) from an
+elevated prompt in `%LOCALAPPDATA%\BetterTerminal\app`.
 
 Running a newer `BetterTerminal.exe` replaces that copy with the newer version by itself; an older
 one leaves a newer copy alone.
 
-To remove it: delete `%LOCALAPPDATA%\BetterTerminal` and `%APPDATA%\BetterTerminal`.
+To remove it: run `beterm-service.exe --uninstall` from an elevated prompt first - deleting the
+folders leaves the service registered - then delete `%LOCALAPPDATA%\BetterTerminal` and
+`%APPDATA%\BetterTerminal`.
 
 Needs 64-bit Windows and .NET Framework 4.8, which is already on Windows 10 and 11. Windows 10 build
 17763 or newer gets the full terminal; older builds fall back to a hosted console window.
@@ -116,15 +125,26 @@ exit code instead of going blank.
 
 ## Also in the box
 
-The download is one executable, and these come inside it. After the first run they sit in
-`%LOCALAPPDATA%\BetterTerminal\app` beside the `beterm` command.
+The download is one executable, and everything below travels inside it. After the first run it all
+sits in `%LOCALAPPDATA%\BetterTerminal\app` beside the `beterm` command.
 
-| Program | What it is for | In the download |
-| --- | --- | --- |
-| `beterm-banner.exe` | Writes the banner a session opens on. The shell runs it as its first command. | yes |
-| `beterm-aiwizard.exe` | The CLI-AI Wizard, also reachable from the shell picker beside Command Prompt and PowerShell. Ported from Deerpfy's `ai.bat`. | yes |
-| `beterm-wrap.exe` | A text interface for the PowerShell scripts in `tools\`: pick one, fill in its parameters, watch its output and see the exit code it really returned. | build it yourself |
-| `beterm-service.exe` | The optional "BetterTerminal Host" Windows service. Installing it is machine-wide and needs an elevated prompt: `beterm-service.exe --install`. The application itself never elevates. | build it yourself |
+| Program | What it is for |
+| --- | --- |
+| `beterm-service.exe` | The **BetterTerminal Host** Windows service. The first run registers it, and it starts with the machine from then on. It runs with no window; its whole visible life is its entry in `services.msc` and the lines it writes to the Windows application log. It also accounts for the helper programs staged beside it. |
+
+<details>
+<summary>The helper programs it accounts for</summary>
+
+| Program | What it is for |
+| --- | --- |
+| `beterm-banner.exe` | Writes the banner a session opens on. The shell runs it as its first command. |
+| `beterm-aiwizard.exe` | The CLI-AI Wizard, also reachable from the shell picker beside Command Prompt and PowerShell. Ported from Deerpfy's `ai.bat`. |
+| `beterm-wrap.exe` | A text interface for the PowerShell scripts in `tools\`: pick one, fill in its parameters, watch its output and see the exit code it really returned. |
+
+The service does not run these itself - each needs a real console and a service has none. What it
+provides is a registered, always-on presence that records which of them are staged beside it.
+
+</details>
 
 ## Build it yourself
 
@@ -165,7 +185,8 @@ code is held to, [TIPS.md](TIPS.md) for the traps that cost time once already, a
 | `%APPDATA%\BetterTerminal\workspace.json` | Tabs, splits, appearance, window position. |
 | `%APPDATA%\BetterTerminal\connections.json` | Saved connections - a user name and an address each, **never a password**. |
 | `<project>\.beterm\project.json` | That project's settings, commands and values. Plain text you may commit. |
-| `%LOCALAPPDATA%\BetterTerminal\` | The installed copy and the `beterm` command. |
+| `%LOCALAPPDATA%\BetterTerminal\` | The installed copy, the helper programs and the `beterm` command. |
+| The machine's service database | The **BetterTerminal Host** service, registered on the first run. The one thing outside your profile; `beterm-service.exe --uninstall` removes it. |
 
 The application makes exactly one kind of network call: a connection to port 22 of a host you saved,
 to decide whether its heart is green. It sends nothing, reads nothing and stores no result. There is

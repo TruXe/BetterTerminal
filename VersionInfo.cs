@@ -5,6 +5,6 @@ using System.Reflection;
 // only other place a version number is written down, and tools\build.ps1 checks that the two agree.
 //
 // The copy under the user profile updates itself against this number - see Services\SelfInstall.cs.
-[assembly: AssemblyVersion("1.3.1.0")]
-[assembly: AssemblyFileVersion("1.3.1.0")]
-[assembly: AssemblyInformationalVersion("1.3.1 BETA")]
+[assembly: AssemblyVersion("1.4.1.0")]
+[assembly: AssemblyFileVersion("1.4.1.0")]
+[assembly: AssemblyInformationalVersion("1.4.1 BETA")]

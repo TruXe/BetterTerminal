@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.ServiceProcess;
+using System.Threading;
+using BetterTerminal.Updating;
 
 namespace BetterTerminal.Service
 {
@@ -23,6 +25,9 @@ namespace BetterTerminal.Service
 
         private const string LogSource = "BetterTerminal Host";
 
+        private UpdateSignal _signal;
+        private Timer _poll;
+
         public HostService()
         {
             ServiceName = Name;
@@ -35,11 +40,62 @@ namespace BetterTerminal.Service
         protected override void OnStart(string[] args)
         {
             Log("Service started. " + HelperInventory.Describe());
+            StartUpdates();
         }
 
         protected override void OnStop()
         {
+            StopUpdates();
             Log("Service stopped.");
+        }
+
+        private void StartUpdates()
+        {
+            _signal = new UpdateSignal();
+
+            // A version already staged from a previous run is offered to the first client that
+            // connects, before the first poll has had a chance to run.
+            Version staged = UpdateShared.ReadStagedVersion();
+            if (staged != null)
+            {
+                _signal.SetAvailable(staged);
+            }
+
+            _signal.Start();
+            _poll = new Timer(Poll, null, UpdateShared.InitialPollDelay, UpdateShared.PollInterval);
+        }
+
+        private void StopUpdates()
+        {
+            if (_poll != null)
+            {
+                _poll.Dispose();
+                _poll = null;
+            }
+
+            if (_signal != null)
+            {
+                _signal.Dispose();
+                _signal = null;
+            }
+        }
+
+        private void Poll(object state)
+        {
+            try
+            {
+                Version found = UpdateCheck.Run();
+                if (found != null && _signal != null)
+                {
+                    _signal.SetAvailable(found);
+                    Log("Staged update " + UpdateShared.NormalizedString(found) + ".");
+                }
+            }
+            catch (Exception error)
+            {
+                // A failed check must not take the service down; the next poll tries again.
+                Log("Update check failed: " + error.Message);
+            }
         }
 
         protected override void OnShutdown()

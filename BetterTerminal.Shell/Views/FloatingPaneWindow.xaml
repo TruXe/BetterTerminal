@@ -1,0 +1,80 @@
+<Window x:Class="BetterTerminal.Shell.Views.FloatingPaneWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        mc:Ignorable="d"
+        Title="Pane"
+        Width="900" Height="560" MinWidth="360" MinHeight="220"
+        WindowStartupLocation="Manual"
+        ShowInTaskbar="True"
+        Background="{DynamicResource Bt.ChromeBackgroundBrush}"
+        Foreground="{DynamicResource Bt.TextFillPrimaryBrush}"
+        FontFamily="{DynamicResource Bt.Font.Ui}"
+        FontSize="{DynamicResource Bt.FontSize.Body}"
+        UseLayoutRounding="True">
+
+    <!-- CaptionHeight 0: the header is dragged by this window's own handlers so the drag can be
+         tracked against the main window's dock targets. Letting the frame move the window would
+         hand the pointer to a modal move loop and there would be nothing left to hit-test with. -->
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0" ResizeBorderThickness="6"
+                            CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </shell:WindowChrome.WindowChrome>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border x:Name="Header" Grid.Row="0" Height="36"
+                Background="{DynamicResource Bt.ChromeBackgroundBrush}"
+                BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}" BorderThickness="0,0,0,1"
+                Cursor="SizeAll"
+                AutomationProperties.Name="Drag to dock this pane back">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
+                            Margin="12,0,0,0">
+                    <Control Style="{StaticResource Bt.BrandMark}" Width="14" Height="14"
+                             VerticalAlignment="Center"/>
+                    <TextBlock x:Name="Caption" Margin="10,0,0,0" VerticalAlignment="Center"
+                               Style="{StaticResource Bt.Text.MonoSmall}"
+                               TextTrimming="CharacterEllipsis" Text="Pane"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top"
+                            shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Style="{StaticResource Bt.Button.Caption}" Height="36" Click="OnDockBack"
+                            ToolTip="Put this pane back in the window"
+                            AutomationProperties.Name="Dock this pane back">
+                        <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE944;"/>
+                    </Button>
+                    <Button Style="{StaticResource Bt.Button.Caption}" Height="36" Click="OnMinimize"
+                            AutomationProperties.Name="Minimize">
+                        <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE921;"/>
+                    </Button>
+                    <Button Style="{StaticResource Bt.Button.Caption}" Height="36" Click="OnToggleMaximize"
+                            AutomationProperties.Name="Maximize or restore">
+                        <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE922;"/>
+                    </Button>
+                    <Button Style="{StaticResource Bt.Button.CaptionClose}" Height="36" Click="OnClose"
+                            AutomationProperties.Name="Close this pane">
+                        <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE8BB;"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Background="{DynamicResource Bt.TerminalBackgroundBrush}">
+            <ContentControl x:Name="Host" Margin="12,10,12,10"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+        </Border>
+    </Grid>
+</Window>

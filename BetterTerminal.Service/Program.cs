@@ -36,6 +36,9 @@ namespace BetterTerminal.Service
                     new HostService().RunConsole();
                     return 0;
 
+                case "check":
+                    return RunCheck();
+
                 case "help":
                 case "?":
                     Usage();
@@ -45,6 +48,15 @@ namespace BetterTerminal.Service
                     ServiceBase.Run(new HostService());
                     return 0;
             }
+        }
+
+        private static int RunCheck()
+        {
+            System.Version staged = UpdateCheck.Run();
+            System.Console.WriteLine(staged == null
+                ? "No newer release is available."
+                : "Staged update " + Updating.UpdateShared.NormalizedString(staged) + ".");
+            return 0;
         }
 
         private static int Guarded(Action action)
@@ -69,6 +81,7 @@ namespace BetterTerminal.Service
             Console.WriteLine("  --install     register the service (needs an elevated prompt)");
             Console.WriteLine("  --uninstall   remove the service (needs an elevated prompt)");
             Console.WriteLine("  --console     run in the foreground until Enter is pressed");
+            Console.WriteLine("  --check       check for a newer release now and stage it if found");
         }
     }
 }

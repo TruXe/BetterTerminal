@@ -73,6 +73,18 @@ namespace BetterTerminal.Shell.Views
             get { return _session != null && _session.IsRunning; }
         }
 
+        /// <summary>
+        /// Whether this surface can be moved to another top-level window with the session intact.
+        /// The drawn surface can: it is ordinary WPF over a pseudo console, and re-parenting it
+        /// keeps the process, the pseudo console and the scrollback exactly as they were. The
+        /// fallback backend cannot: it hosts a real console window as a child of this one, and that
+        /// child does not follow the element to a different window.
+        /// </summary>
+        public bool CanReparent
+        {
+            get { return _consoleHost == null; }
+        }
+
         public void FocusTerminal()
         {
             if (_renderer != null)

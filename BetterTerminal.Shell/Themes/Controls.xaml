@@ -648,9 +648,19 @@
     </Style>
 
     <!-- ===== GridSplitter ===== -->
+    <!-- Direction and behaviour are stated, never inferred. Left to BasedOnAlignment the control
+         uses its own default HorizontalAlignment of Right, which resolves to CurrentAndNext: a drag
+         then resizes the splitter's own Auto column instead of the two panes - a gap that grows one
+         way and a splitter that refuses to move the other. Measured, not guessed. -->
     <Style x:Key="Bt.GridSplitter" TargetType="GridSplitter">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Width" Value="{DynamicResource Bt.Size.SplitterThickness}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="ResizeDirection" Value="Columns"/>
+        <Setter Property="ResizeBehavior" Value="PreviousAndNext"/>
+        <Setter Property="Cursor" Value="SizeWE"/>
+        <Setter Property="Focusable" Value="False"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="GridSplitter">
@@ -672,7 +682,12 @@
     <Style x:Key="Bt.GridSplitter.Row" TargetType="GridSplitter">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Height" Value="{DynamicResource Bt.Size.SplitterThickness}"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
         <Setter Property="ResizeDirection" Value="Rows"/>
+        <Setter Property="ResizeBehavior" Value="PreviousAndNext"/>
+        <Setter Property="Cursor" Value="SizeNS"/>
+        <Setter Property="Focusable" Value="False"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="GridSplitter">

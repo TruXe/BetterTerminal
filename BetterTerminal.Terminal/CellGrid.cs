@@ -18,6 +18,11 @@ namespace BetterTerminal.Terminal
 
         private int _scrollbackStart;
         private int _scrollbackCount;
+
+        // Cache behind FirstUsedLine: the answer once known, and how much of the history has already
+        // been proved blank so it is never re-examined.
+        private int _firstUsed = -1;
+        private int _blankPrefix;
         private long _versionCounter;
 
         private int _columns;
@@ -90,6 +95,41 @@ namespace BetterTerminal.Terminal
         public int CurrentBackground { get; set; }
 
         public CellFlags CurrentFlags { get; set; }
+
+        /// <summary>
+        /// The oldest line worth scrolling to: the first one in the history that has anything on it.
+        /// Blank lines reach the history honestly - shrinking the pane pushes the top of the screen
+        /// into it whether or not anything was written there - and without this the view scrolls up
+        /// into that emptiness, past the banner the session opened with, which reads as a bug.
+        ///
+        /// Scanned once and remembered. <see cref="_blankPrefix"/> is how far the scan has already
+        /// proved blank, so new history is only ever examined once and the cost stays flat.
+        /// </summary>
+        public int FirstUsedLine
+        {
+            get
+            {
+                if (_firstUsed >= 0)
+                {
+                    return _firstUsed;
+                }
+
+                while (_blankPrefix < _scrollbackCount)
+                {
+                    int slot = (_scrollbackStart + _blankPrefix) % _scrollbackCapacity;
+                    if (!IsBlank(_scrollback[slot]))
+                    {
+                        _firstUsed = _blankPrefix;
+                        return _firstUsed;
+                    }
+
+                    _blankPrefix++;
+                }
+
+                // Nothing written yet: the live screen is the ceiling.
+                return _scrollbackCount;
+            }
+        }
 
         public int ScrollbackCount
         {
@@ -513,6 +553,12 @@ namespace BetterTerminal.Terminal
             {
                 slot = _scrollbackStart;
                 _scrollbackStart = (_scrollbackStart + 1) % _scrollbackCapacity;
+
+                // The oldest line is gone, so every absolute index below it moves down one. When the
+                // line being dropped is the answer itself, the answer is unknown again - not zero,
+                // which would claim the new oldest line has content without having looked.
+                _firstUsed = _firstUsed > 0 ? _firstUsed - 1 : -1;
+                _blankPrefix = Math.Max(0, _blankPrefix - 1);
             }
             else
             {
@@ -521,6 +567,29 @@ namespace BetterTerminal.Terminal
 
             _scrollback[slot] = line;
             _scrollbackVersions[slot] = version;
+        }
+
+        /// <summary>
+        /// Whether a line has anything on it. Only the character matters: a run of spaces carrying
+        /// a background colour is still nothing to scroll back to.
+        /// </summary>
+        private static bool IsBlank(TerminalCell[] line)
+        {
+            if (line == null)
+            {
+                return true;
+            }
+
+            for (int column = 0; column < line.Length; column++)
+            {
+                char character = line[column].Character;
+                if (character != ' ' && character != '\0')
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static TerminalCell[] ResizeLine(TerminalCell[] line, int columns)

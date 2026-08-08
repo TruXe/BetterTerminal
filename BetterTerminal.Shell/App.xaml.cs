@@ -14,6 +14,14 @@ namespace BetterTerminal.Shell
             // window exists, because the first window decides what to open.
             StartupOptions.Current.Parse(e.Args);
 
+            // Before anything is shown: if the service staged a newer build while this was closed,
+            // hand off to it now, with no window and no session in the way of the file replacement.
+            if (UpdateApply.TryApplyOnStartup())
+            {
+                Shutdown();
+                return;
+            }
+
             // Registering the command is a no-op on every start after the first.
             CommandRegistration.Ensure();
 
@@ -26,7 +34,15 @@ namespace BetterTerminal.Shell
 
             MainWindow window = new MainWindow();
             MainWindow = window;
-            window.Loaded += delegate { splash.Close(); };
+            window.Loaded += delegate
+            {
+                splash.Close();
+
+                // After the window is up, never before: registering the service asks for
+                // administrator rights, and that prompt must not stand in front of a window that
+                // has not finished showing. Asked once in the life of the installation.
+                ServiceInstall.EnsureLater();
+            };
             window.Show();
         }
     }

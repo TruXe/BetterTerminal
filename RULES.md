@@ -149,6 +149,14 @@ enforces them.
   where `<area>` is `interop`, `terminal`, `shell`, `tools` or `docs`. Optional body wrapped at 72. No
   emoji, no trailing period, English only.
 - **[convention] A commit must build clean** in both `Debug|x64` and `Release|x64`, zero warnings (R4).
+- **[convention] A release message lists everything that changed, one tagged line each:**
+  `[ FIXED ]` for something that was broken, `[ ADDED ]` for something new, `[ REMOVED ]` for
+  something taken away, `[ WARN ]` for anything the user must know before updating - a prompt they
+  will see, a promise that no longer holds, a manual step, a known limit. Written with the spaces
+  inside the brackets, in the release notes and in the tag message. The lines come from the
+  `MEMORY.md` decision-log entries written since the previous tag, which is where each decision and
+  its cost is already recorded. `[ WARN ]` is not optional. Standing user instruction 2026-08-07,
+  [MEMORY.md#decision-log](MEMORY.md#decision-log).
 - **[enforced by .github/workflows/build.yml] A published version is a Release, never a pre-release.**
   The publish step creates with `--latest` and corrects an existing one with
   `gh release edit $tag --prerelease=false --latest`. Adding `--prerelease` back is a regression: a
@@ -197,21 +205,30 @@ enforces them.
   only through the pseudo console input pipe; the command line comes from `ShellProfile`. This is
   what makes the saved connections and the user-defined project commands safe: both are written
   through `TerminalSurface.StartupCommand` or `Write`, exactly as if the user had typed them.
-- **[convention] Installation and command registration stay per user and never elevate.**
-  `Services\SelfInstall.cs` copies the executable and its two DLLs to
+- **[convention] Installation and command registration stay per user and never elevate.** The
+  service registration below is the one thing that leaves the user profile; nothing else may.
+  `Services\SelfInstall.cs` copies the application, its libraries and the `beterm-*` helpers to
   `%LOCALAPPDATA%\BetterTerminal\app`, and `Services\CommandRegistration.cs` writes
   `%LOCALAPPDATA%\BetterTerminal\bin\beterm.cmd` and joins that one folder to
   `HKCU\Environment\Path`. Nothing is written to `Program Files`, to the machine-wide search path or
   to `HKLM`, no uninstall entry is registered, and both steps stay best effort - a failure may not
   stop the window opening.
-- **[convention] One deliberate elevation exception, added 2026-08-06: the separate
-  `beterm-service.exe` service host.** Registering a Windows service is machine-wide and needs an
-  elevated prompt and the service database, so `beterm-service.exe --install` is the one component
-  that elevates - run by hand, once, by the operator, never by the application. **The application
-  itself still runs `asInvoker` and never elevates**, never installs the service, and does not depend
-  on it. It writes only to the machine service database and the application event log. The user's
-  explicit choice after being told a service cannot be per user,
-  [MEMORY #decision-log](MEMORY.md#decision-log).
+- **[convention] One deliberate elevation exception: the separate `beterm-service.exe` service
+  host, which the first run registers.** Registering a Windows service is machine-wide and needs an
+  elevated prompt and the service database, so this is the one component that elevates. Since
+  2026-08-07 the application asks for it itself: `Services\ServiceInstall.cs` starts
+  `beterm-service.exe --install` with the `runas` verb once, after the main window is up, on a pool
+  thread. **The application process itself still runs `asInvoker` and never elevates** - it starts
+  an elevated child, which is not the same thing, and no shell it hosts is ever elevated. Three
+  constraints hold and a change that breaks any of them is a regression:
+  **(1) asked once** - a marker in `%LOCALAPPDATA%\BetterTerminal\service-install.txt` is written
+  *before* the attempt, so a refusal, a failure or a machine with no elevation available is never
+  asked twice; **(2) never blocking** - the prompt is the user's to answer in their own time and no
+  window waits on it; **(3) never required** - nothing in the application depends on the service, so
+  refusing it costs the user nothing. The service writes only to the machine service database and
+  the application event log. Superseded the "run by hand, never by the application" form of this
+  rule on 2026-08-07 at the user's explicit request after being told it means a prompt and a write
+  outside the user profile, [MEMORY #decision-log](MEMORY.md#decision-log).
 - **[convention] The CLI-AI Wizard builds a command line from menu choices - which is its whole
   point - so its own child is exempt from "never build a child command line out of user-typed
   text".** It is safe because every free-text value is run through the allow-list `TextSanitizer`

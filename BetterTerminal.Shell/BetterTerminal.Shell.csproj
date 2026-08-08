@@ -39,6 +39,7 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceProcess" />
     <Reference Include="System.Xaml" />
     <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
@@ -120,7 +121,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\ConnectionsWindow.xaml">
+    <Page Include="Views\ConnectionsPanel.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\FilesPanel.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\FloatingPaneWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -128,12 +137,15 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\FilesWindow.xaml">
+    <Page Include="Views\UpdateToastWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
     <Compile Include="..\VersionInfo.cs">
       <Link>Properties\VersionInfo.cs</Link>
+    </Compile>
+    <Compile Include="..\UpdateShared.cs">
+      <Link>Updating\UpdateShared.cs</Link>
     </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
@@ -163,24 +175,38 @@
       <DependentUpon>Views\WorkspaceSetupWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Views\ConnectionsWindow.xaml.cs">
-      <DependentUpon>Views\ConnectionsWindow.xaml</DependentUpon>
+    <Compile Include="Views\ConnectionsPanel.xaml.cs">
+      <DependentUpon>Views\ConnectionsPanel.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Views\FilesPanel.xaml.cs">
+      <DependentUpon>Views\FilesPanel.xaml</DependentUpon>
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Views\FloatingPaneWindow.xaml.cs">
+      <DependentUpon>Views\FloatingPaneWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Views\SessionWindow.xaml.cs">
       <DependentUpon>Views\SessionWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Views\FilesWindow.xaml.cs">
-      <DependentUpon>Views\FilesWindow.xaml</DependentUpon>
+    <Compile Include="Views\UpdateToastWindow.xaml.cs">
+      <DependentUpon>Views\UpdateToastWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Views\CodeEditor.cs" />
     <Compile Include="Views\PaletteInputEventArgs.cs" />
     <Compile Include="Views\PaneDropEventArgs.cs" />
+    <Compile Include="Views\DockOverlay.cs" />
     <Compile Include="Views\TerminalSurface.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
+    <Compile Include="Converters\IsNarrowConverter.cs" />
     <Compile Include="Services\AppTheme.cs" />
+    <Compile Include="Services\DockController.cs" />
+    <Compile Include="Services\DockSide.cs" />
+    <Compile Include="Services\DockSite.cs" />
+    <Compile Include="Services\IDockHost.cs" />
     <Compile Include="Services\CommandRegistration.cs" />
     <Compile Include="Services\DroppedPaths.cs" />
     <Compile Include="Services\FileKind.cs" />
@@ -188,6 +214,9 @@
     <Compile Include="Services\HostReachability.cs" />
     <Compile Include="Services\OpenedFile.cs" />
     <Compile Include="Services\SelfInstall.cs" />
+    <Compile Include="Services\UpdateApply.cs" />
+    <Compile Include="Services\UpdateClient.cs" />
+    <Compile Include="Services\ServiceInstall.cs" />
     <Compile Include="Services\ShellPresentation.cs" />
     <Compile Include="Services\StartupOptions.cs" />
     <Compile Include="Services\MotionPolicy.cs" />
@@ -214,6 +243,8 @@
     <Compile Include="ViewModels\FileNodeViewModel.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="ViewModels\ObservableObject.cs" />
+    <Compile Include="ViewModels\DockLeafViewModel.cs" />
+    <Compile Include="ViewModels\ToolPaneViewModel.cs" />
     <Compile Include="ViewModels\PaneViewModel.cs" />
     <Compile Include="ViewModels\ProfileViewModel.cs" />
     <Compile Include="ViewModels\RowSplitViewModel.cs" />
@@ -227,6 +258,7 @@
     <Compile Include="ConnectionStore.cs" />
     <Compile Include="JsonFile.cs" />
     <Compile Include="PersistedConnections.cs" />
+    <Compile Include="PersistedFloating.cs" />
     <Compile Include="PersistedNode.cs" />
     <Compile Include="PersistedProject.cs" />
     <Compile Include="ProjectStore.cs" />
@@ -252,6 +284,16 @@
     <ProjectReference Include="..\BetterTerminal.Banner\BetterTerminal.Banner.csproj">
       <Project>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40005}</Project>
       <Name>BetterTerminal.Banner</Name>
+    </ProjectReference>
+    <!-- Referenced so they land in this project's output and travel inside the one-file download:
+         no code here calls either of them. -->
+    <ProjectReference Include="..\BetterTerminal.Service\BetterTerminal.Service.csproj">
+      <Project>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40008}</Project>
+      <Name>BetterTerminal.Service</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BetterTerminal.Wrap\BetterTerminal.Wrap.csproj">
+      <Project>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40004}</Project>
+      <Name>BetterTerminal.Wrap</Name>
     </ProjectReference>
     <!-- Not called by any code here: the reference is what puts beterm-aiwizard.exe and its library
          in this project's output, so the command registration can stage them where a pane finds

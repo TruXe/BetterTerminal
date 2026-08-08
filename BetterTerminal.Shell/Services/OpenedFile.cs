@@ -46,8 +46,16 @@ namespace BetterTerminal.Shell.Services
             Encoding = encoding;
             IsEditable = editable;
             Language = language;
+            // Say which of the two reasons left it plain, so an uncoloured file is never a mystery:
+            // the size is one thing, an extension nobody has a language for is another.
+            string plain = language != null
+                ? string.Empty
+                : editable
+                    ? " - no colours for this kind of file"
+                    : string.Empty;
+
             Details = (language == null ? "text" : language.Name) + ", " + encoding.WebName + ", " + Size(Length) +
-                (editable ? string.Empty : " - too large to edit, showing the beginning read-only");
+                (editable ? plain : " - too large to edit or colour, showing the beginning read-only");
         }
 
         public void SetImage(BitmapSource image)

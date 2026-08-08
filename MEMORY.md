@@ -1,8 +1,8 @@
----
+﻿---
 updated: 2026-08-08
 scope: Why BetterTerminal is built the way it is - decisions, unfinished threads, dead ends and vocabulary, for a reader returning cold.
 stability: evolving
-sources: [session context packet 2026-08-04, source under D:\Multi Terminál Window after the design import, docs/_archive/2026-08-04/, tools/*.ps1, user answers]
+sources: [session context packet 2026-08-04, source under D:\Multi TerminĂˇl Window after the design import, docs/_archive/2026-08-04/, tools/*.ps1, user answers]
 owner_agent: memory-agent
 ---
 
@@ -12,6 +12,12 @@ Everything here happened on 2026-08-04, and there is no git history to mine. If 
 with the code, the code wins - then fix it.
 
 ## Current state
+
+**Update 2026-08-08 (1.4.0).** The splitter between two panes moves the boundary between them, both
+directions, on both axes. It was resizing its own gutter column instead - a growing empty strip one
+way, a dead splitter the other - because the style let `GridSplitter` fall back to its own default
+alignment of `Right`. Direction and behaviour are now stated outright in both splitter styles; the
+newest [decision-log](#decision-log) entry has the measurements.
 
 **Update 2026-08-08 (1.3.1).** Keyboard input reaches a session as whole key events now, not as bare
 characters the console host had to guess a key for. That guess used the **system default** keyboard
@@ -41,7 +47,7 @@ close wins.
 Snapshot 2026-08-04, after the design-system import. BetterTerminal is a WPF desktop application
 hosting multiple live shell sessions (cmd.exe and Windows PowerShell) in tabs and splits in one
 window. Three planned phases complete, then the whole UI layer replaced by an imported design system.
-Root is `D:\Multi Terminál Window`; layout in [STRUCTURE #directory-map](STRUCTURE.md#directory-map).
+Root is `D:\Multi TerminĂˇl Window`; layout in [STRUCTURE #directory-map](STRUCTURE.md#directory-map).
 
 **What works.** Both configurations rebuild clean - `Debug|x64` and `Release|x64`, **zero errors and
 zero warnings**; that is the pass condition and it is met. Sessions run, render, take keyboard input,
@@ -64,7 +70,7 @@ The interactive gaps the user reserved for themselves are still open: per-pane k
 independence; full-screen applications entering and leaving the **alternate screen buffer**; a DPI
 change while running; window snap; input latency.
 
-> ❓ Unverified: the five interactive items above - not confirmed against a running build.
+> âť“ Unverified: the five interactive items above - not confirmed against a running build.
 
 **Next**, in order of leverage: the four empty settings pages, the user's interactive pass, then the
 open threads below.
@@ -73,6 +79,191 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-08 - The application updates itself from the latest release, driven by the service
+
+**Context.** The repository is public now and each version ships as a GitHub release whose one asset
+is the launcher, `BetterTerminal.exe`, tagged `vMAJOR.MINOR.PATCH`. The user wanted the application to
+update itself to the latest release, driven by the Windows service, with a visible notification -
+after several earlier attempts that "did not work".
+
+**Why the earlier attempts failed, and the shape that follows from it.** A Windows service runs as
+LocalSystem in session 0 and cannot draw anything on the interactive desktop - not a toast, not a
+window. So the split is forced: the **service** checks and downloads; the **application**, which is
+in the user's session, is the only thing that can show the notice. They meet over a named pipe
+(`BetterTerminal.Update`, granted to authenticated users so the app can connect) and two small
+records under `ProgramData` (readable by both LocalSystem and the user, which neither profile's
+AppData is). This is `UpdateShared.cs`, linked into both assemblies the way `VersionInfo.cs` is,
+because the service must not depend on the WPF application.
+
+**Decision - no JSON, no token, no new dependency.** The latest version is read from the 302 that
+`github.com/OWNER/REPO/releases/latest` returns to `/releases/tag/<tag>`; the tag is the version and
+the asset URL is built from it. Everything uses assemblies already referenced (HttpWebRequest in
+System, named pipes in System.Core). Nothing was added to any manifest but source files.
+
+**Decision - the notice is our own window, not a Windows toast.** A system toast is routed through the
+notification centre and silently held back whenever another application is in the foreground, which
+is exactly when an update notice needs to show - measured live, a `Shell_NotifyIcon` balloon did not
+appear over an active Discord window. `UpdateToastWindow` is a small app-styled window in the corner
+that dismisses itself, so it is never suppressed by focus rules.
+
+**Decision - automatic, but never on top of a live session.** "Automatic" does not mean killing the
+running application out from under live shells and open files. A newer build is downloaded and staged
+silently; the notice appears at once; the replacement happens on the next start, done by the launcher
+before any window exists. The corner notice carries a one-click "Restart now" for immediacy. The
+launcher gained `--wait <pid>`: it waits for the old process to exit before it unpacks over the
+install folder, because files held open by the running copy cannot be replaced - the reliability
+crux, and almost certainly part of why past attempts silently did nothing.
+
+**Verified, offline.** Both configurations build zero-error, zero-warning; `BUILD\` staged at 1.4.0.
+Driven through the real service binary and a real pipe client: with the test hook
+(`BETERM_UPDATE_FEED` / `BETERM_UPDATE_ASSET`, off by default) a `--check` staged a fake 9.9.9.0,
+wrote `staged.txt` and verified the staged file's version; against the live GitHub the same check
+correctly reported nothing newer than 1.4.0 (no false update). The pipe pushed `update 9.9.9.0` to a
+connecting client and answered a `check` request. The launcher's `--wait` was shown to block until
+the named process exited and then proceed. `TryApplyOnStartup` was seen to fire on a staged newer
+version.
+
+**Not verified here, and it needs the user's machine.** The live end to end - the service installed
+and running as LocalSystem polling GitHub on its timer, the real download, the corner notice on the
+desktop, and the self-replace on restart - cannot run from this environment (no elevation, no desktop
+session). **Known limit:** the running service holds `beterm-service.exe` open, so an update replaces
+the application immediately but the **service binary** lags until the service is restarted; the
+service reads the app's `installed.txt` so the version skew is handled correctly in the meantime.
+
+### 2026-08-08 - The connection list and the file explorer are panels, so they dock like panes
+
+**Context.** The user reported that grabbing the SSH form or the file explorer offered no docking.
+Correct: they were windows with their content welded into them, and the pane grid had no way to hold
+anything that was not a session.
+
+**Decision.** Both tools moved into `UserControl`s - `ConnectionsPanel` and `FilesPanel` - that carry
+no caption and no close button, and the windows became frames that host them. There is one definition
+of each tool, so the windowed and docked forms cannot drift apart. `ToolPaneViewModel` wraps a panel
+as a `DockLeafViewModel`, which is why no docking code needed a line changed: the tree, the splitters
+and the tear-off already spoke that type.
+
+**Decision.** The panel instance is handed to whatever hosts it, never rebuilt. A tool holds live
+state - a reachability check in flight, an open folder, an edited file - and rebuilding on each dock
+would throw it away, which is the same mistake as restarting a session. The connections dialog is
+modal, so its dock is decided inside and acted on after `ShowDialog` returns; the pointer belongs to
+the dialog until it is gone.
+
+**Decision.** The layout saves only *which* tool was docked, not what it was showing. What a file
+explorer had open belonged to the session that ended, and restoring it would show a stale view of a
+folder that may have changed.
+
+**Verified.** Both configurations rebuild zero-error, zero-warning; `BUILD\` staged at 1.4.0. Driven
+through the real Release build with UI Automation: the file tree is absent from the main window,
+opening the explorer gives a window whose caption carries the dock button, invoking it puts the tree
+**inside the main window** at 266x779 and takes the grid from three panes to four. A screen capture
+shows the extracted panel rendering correctly in the window - folder tree, status strip, both hints.
+
+**Trap for the next probe.** `$pid` is a read-only PowerShell automatic variable and assigning to it
+kills a UI Automation script in a way that still prints plausible-looking failures;
+`AndCondition` also needs an explicit `[Condition[]]` array from PowerShell. Both cost a run here.
+
+### 2026-08-08 - Panes tear off into windows of their own, and the tear-off is a move
+
+**Context.** The user asked for a docking system: drag a pane header sideways and the pane becomes
+its own window without losing the terminal's memory, drag it back to return it, dock targets shown in
+the primary colour with icons, and the SSH and file windows usable as panes in the grid. Nothing of
+the sort existed - `SessionWindow` looked close but starts a **new** session and kills it on close.
+
+**Decision, and the one that matters.** A tear-off re-parents the very element the grid was holding.
+`PaneViewModel.Surface` owns the session, so moving that instance keeps the process, the pseudo
+console and the scrollback exactly as they were; nothing is rebuilt and nothing restarts. The trap is
+that a content host keeps its child as a **logical** child until told otherwise, and adding an element
+that still has a parent throws - so `DockController.Detach` clears the old holder first, binding and
+all. Do not "simplify" that away; removing the leaf from the tree is not enough, because the discarded
+presenter still owns the element at that instant.
+
+**Decision.** `DockLeafViewModel` is the new base for anything that can be a leaf, so the tree, the
+splitter branches and every docking path work in one currency and a tool pane will dock exactly the
+way a session does. `PaneViewModel` derives from it; `CanFloat` is false for the hosted-console
+fallback backend, whose child console window does not follow the element to another top-level window.
+
+**Decision.** The floating window drags its header by hand rather than through the frame. Handing the
+pointer to the frame's move loop blocks until the button comes up, and the dock targets have to be
+hit-tested while the drag is still running. The drag is in physical screen pixels throughout -
+`Window.Left`/`Top` are device-independent and their relation to real pixels depends on the monitor,
+so a drag expressed in them tears when it crosses a screen of a different scale.
+
+**Decision.** Center on the rosette swaps the two panes rather than tabbing them together: this pane
+tree is binary splits with no tabbed groups inside a pane, so there is nothing to tab into, and a
+swap is the one center meaning the four sides cannot already express.
+
+**Verified.** Both configurations rebuild zero-error, zero-warning; `BUILD\` staged at 1.4.0; the
+Release build starts and UI Automation still finds every caption button. The target geometry was
+driven through the real `DockController` with a laid-out pane host: on a 1000x600 host split in two,
+the pointer at the left pane's centre wins Center, one step left wins the Left arrow, the rosette
+follows to the other pane, the left edge wins an outer Left, and empty space claims nothing - five of
+five.
+
+**Not verified, and it is the interesting half.** The tree surgery - `RemoveLeaf`, `InsertBeside`,
+`InsertAtEdge`, `Replace` - and the end-to-end tear-off and dock-back have **not** been driven. The
+probe that would have done it cannot host `MainWindow`: its `DataTemplate`s fail to resolve
+`StaticResource Bt.Text.Icon` even though the same key resolves through
+`Application.TryFindResource` in that same process. Worth solving once - it blocks every future probe
+that wants the real window.
+
+**Not built.** The SSH list and the file explorer are still windows only. Making them dock means
+lifting `ConnectionsWindow` and `FilesWindow` content into panels that either a window or a leaf can
+host; `DockLeafViewModel` exists so that work needs no change to anything written here.
+
+### 2026-08-08 - The caption buttons got their own column, after a bad merge stacked them
+
+**Context.** The user sent a screenshot of the caption strip with the glyphs colliding: a plus with
+something drawn through it, a chevron over a square, and one window button too few.
+
+**Cause.** Self-inflicted, in the `git stash pop` after pulling the contributor's four commits. The
+local change split the single caption `StackPanel` into two so the window buttons could carry
+`WindowChrome.IsHitTestVisibleInChrome`, and the conflict was resolved by keeping both panels - but
+the caption `Grid` has only three columns and both panels were left on `Grid.Column="2"`. Two
+children in one cell overlap, so the window buttons drew straight over the tab actions.
+
+**Decision.** The caption grid has a fourth `Auto` column and the window buttons live in it. Keep the
+two panels separate: merging them back would put the chrome flag on the tab actions as well, and the
+comment on the second panel says why it exists.
+
+**Verified.** UI Automation on the running Release build reports the five buttons side by side at
+x = 1710, 1742, 1782, 1828, 1874, each 32 px tall, no two sharing an origin; before, minimise sat at
+1710 on top of the plus. A `PrintWindow` capture of the strip shows plus, chevron, minimise, maximise
+and close as five separate glyphs. Both configurations build zero-error, zero-warning.
+
+### 2026-08-08 - The pane splitter resizes the panes, because it was resizing its own column
+
+**Context.** The user reported that dragging the separator between two side-by-side sessions to the
+right opened a growing empty strip between them, and that dragging it left did nothing at all. The
+row splitter was never reported and turned out to be fine; only the column one was broken.
+
+**Cause.** `GridSplitter` overrides the metadata of `HorizontalAlignment` with a default of **Right**
+- the control's own default, not the framework's `Stretch`. `Bt.GridSplitter` replaces the theme
+style outright and never set that property, so `Right` stood. With the default
+`ResizeBehavior="BasedOnAlignment"` a Right-aligned splitter in a column resolves to
+**CurrentAndNext**, and "current" is the splitter's **own** `Auto` column. So a drag was widening the
+gutter, not moving the boundary: measured on a 1000 px grid, dragging right 80 px took the gutter
+from 6 px to **86 px** and shrank *both* panes from 497 to 457 as the two stars re-split what was
+left. Dragging left could only push the gutter back to its 6 px minimum and then stopped dead, which
+is the "nothing happens". The row style escaped it because only the horizontal alignment carries that
+overridden default; `VerticalAlignment` was still `Stretch`, which resolves to `PreviousAndNext`.
+
+**Decision.** Both splitter styles now state direction and behaviour instead of letting them be
+inferred from alignment: `HorizontalAlignment`/`VerticalAlignment` `Stretch`, an explicit
+`ResizeDirection` and `ResizeBehavior="PreviousAndNext"`. Do not delete these setters as redundant -
+the alignment heuristic is exactly what broke this, and `Bt.Size.SplitterThickness` is small enough
+that the fallback tie-break on `ActualWidth <= ActualHeight` is not something to rely on either.
+`Cursor` is set here too (`SizeWE`/`SizeNS`) because replacing the theme template threw away the
+cursor that came with it, and `Focusable="False"` keeps the splitter out of the tab order.
+
+**Verified.** Both configurations rebuild zero-error, zero-warning and `BUILD\` is staged at 1.4.0.
+Driven through a probe that builds the same grids the two `DataTemplate`s build - real styles, real
+`ColumnSplitViewModel`/`RowSplitViewModel`, the same TwoWay length bindings - and raises the real
+`Thumb` drag events, which is the path a mouse drag takes. Columns on a 1000 px grid: gutter holds at
+6 px throughout, right 80 gives 577/417, left 160 gives 417/577, and the drags clamp at the 120 px
+`MinWidth` on either side. Rows on 600 px: down 60 gives 357/237, up 120 gives 237/357, clamping at
+`MinHeight` 90. `FirstRatio` on the view model tracked every drag (0.5 -> 0.58 -> 0.42 -> 0.879), so
+`TerminalWorkspace` persists and restores what the user set.
 
 ### 2026-08-08 - Typed characters are sent as whole key events, because the host was guessing the key (1.3.1)
 
@@ -117,7 +308,7 @@ WPF raises: mode negotiated true, then `1` gave `RESULT=1`, `F` gave `RESULT=5` 
 `RESULT=7` from `choice /c 1234FUQ` - all three keys, where before only `q` answered. The records
 arriving inside the session are now `vk=0x31 char='1'` and `vk=0x51 char='q'` with no modifier
 noise. Regression checks on the line-reading path: `echo hi 123 ABC` typed and entered came back as
-`GOT=[echo hi 123 ABC]`, and the accented `ěščř` round-tripped intact.
+`GOT=[echo hi 123 ABC]`, and the accented `Ä›ĹˇÄŤĹ™` round-tripped intact.
 
 ### 2026-08-08 - A dropped file is text on the input line, quoted for the shell that pane runs
 
@@ -172,6 +363,76 @@ underneath. The 8 px gap after the chevron is deliberate: it keeps the plus off 
 **Verified.** `Release|x64` and `Debug|x64` both build zero-error, zero-warning; `BUILD\` staged at
 1.3.0. Captured with `PrintWindow`: the five glyphs sit on one line. No version bump - `SelfInstall`
 replaces at the same version by file timestamp, which is exactly the case it was written for.
+### 2026-08-07 - A maximised window stopped hanging off every edge of the screen
+
+**Context.** The user reported the interface overflowing the screen when maximised and sent two
+screenshots: the title bar cut off on the left, the status strip swallowed by the taskbar. Measured
+rather than guessed: maximised the window was **-8,-8 at 1936x1048** against a work area of
+**0,0 1920x1032** - eight pixels past all four edges. A window that draws its own frame is maximised
+to the whole monitor *grown by the sizing border*, and that is a real window larger than the screen,
+so nothing in the layout was at fault.
+
+**Decision, and what the measuring actually showed.** `BetterTerminal.Terminal\WindowFrame.cs`
+answers `WM_GETMINMAXINFO` with the monitor's work area - the correct thing to say, and it is said.
+It does **not** settle it here. The answer was given before the frame's own hook and after it,
+marked handled and not, with the work area and with the work area less the border; the frame put its
+own numbers back every time except once, and that once did not reproduce. So the second half is what
+carries the fix: while the window is maximised the content is inset by exactly that border, which is
+entirely under this application's control. The window rectangle still hangs over, and the taskbar
+draws on top of the eight pixels that do; what the user sees is aligned.
+
+Do not "simplify" this by deleting either half. The hook is what keeps the window from growing past
+the work area when it is snapped, and the inset is what makes the content line up.
+
+**Also fixed.** The minimise, maximise and close buttons never carried
+`WindowChrome.IsHitTestVisibleInChrome`, so the frame treated them as title bar and a click dragged
+the window instead of pressing the button - the buttons beside them in the same strip had it, these
+did not.
+
+**Verified.** Measured before and after on a 1920x1080 screen with a 48-pixel taskbar, and confirmed
+in a full-screen capture: the status strip now sits above the taskbar instead of under it, and the
+left edge of the title bar is no longer cut. Debug and Release rebuild with zero warnings.
+
+**Still open, told to the user rather than quietly dropped:** the docking system they asked for, and
+the empty gaps they see when dragging a separator. The gaps could not be reproduced with synthetic
+mouse input - the drag never took - and they may well have been this same eight-pixel clipping.
+
+### 2026-08-07 - The first run registers the service, and the download is one file (1.4.0)
+
+**Context.** The user asked for the release to carry `BetterTerminal.exe` alone, for the helper
+programs to be presented behind the service rather than listed beside it, and for the service to be
+installed as a Windows service. The last one was put to them as three options with the cost spelled
+out; they chose **automatically on the first run**.
+
+**Decision.** `Services\ServiceInstall.cs` starts `beterm-service.exe --install` with the `runas`
+verb once, from the main window's `Loaded`, on a pool thread. Three constraints make it bearable and
+each is load-bearing: the marker in `%LOCALAPPDATA%\BetterTerminal\service-install.txt` is written
+**before** the attempt, so a refusal or a machine that cannot elevate is never asked twice; the work
+is off the interface thread, because the prompt is the user's to answer in their own time; and
+nothing in the application depends on the service, so refusing costs the user nothing.
+
+**What this cost, stated plainly.** Two promises the project used to make are now false and have
+been rewritten rather than left standing: "nothing written outside your user profile" and "never
+installs the service, run by hand by the operator". The application process still runs `asInvoker` -
+it starts an elevated child, which is not the same thing, and no hosted shell is ever elevated - but
+deleting the two folders no longer removes everything, so the README's removal instructions now lead
+with `beterm-service.exe --uninstall`.
+
+**Decision.** The Shell now project-references `BetterTerminal.Service` and `BetterTerminal.Wrap`
+purely so their executables land in its output, the way it already did for the banner and the
+wizard. That is what puts all four helpers in the payload the one-file launcher carries and in the
+copy `SelfInstall` makes - the service could not install itself from a download that did not contain
+it.
+
+**Decision.** The release asset is `BetterTerminal.exe` and nothing else; the archive of loose files
+stays as the workflow run's own artifact. A release this workflow touches also has an older
+`BetterTerminal-x64.zip` asset deleted, so a release that says it carries one file does.
+
+**Verified.** Debug and Release both rebuild with zero errors and zero warnings, and all four
+`beterm-*` programs now reach `%LOCALAPPDATA%\BetterTerminal\app`. The ask-once guard was checked
+with a marker in place: no elevation prompt appeared, the application stayed up and the marker was
+left alone. **Accepting the prompt itself was left to the user** - it is their machine and their
+service database, and their standing workflow is to run the interactive pass themselves.
 
 ### 2026-08-07 - Code is coloured, hand-built, because there is no editor library (1.3.0)
 
@@ -573,14 +834,14 @@ drained - and **exit code 0** with it running, writing the PNG it was asked for;
 and the interface came back with the exit code; a window resize redrew the frame at the new size with
 no leftovers; and quitting left the shell that started it with its scrollback intact, a visible
 cursor and no stray escape sequence. One defect was found and fixed this way: redirected output was
-being decoded in the machine's OEM code page, which put a bar through the accent in "Terminál" -
+being decoded in the machine's OEM code page, which put a bar through the accent in "TerminĂˇl" -
 a child inherits the console code page, and this program had already set that to UTF-8.
 
 ### 2026-08-05 - The first run installs a copy under the user profile, and the command runs that
 
 **Context:** The command written by the first version of `CommandRegistration` embedded the absolute
 path of the build output. Running `beterm` produced *"Windows cannot find D:\Multi Termin?l
-Window\...\BetterTerminal.exe"* - the `á` had been decoded in a code page that was not the one the
+Window\...\BetterTerminal.exe"* - the `Ăˇ` had been decoded in a code page that was not the one the
 file was written in. Writing the file in the OEM page fixed the default console but not one that had
 been switched to 65001, and it did nothing about the deeper problem: the command pointed at a build
 folder that can be deleted, moved or renamed.
@@ -603,7 +864,7 @@ the installed copy and exiting the original - surprising when you just started a
 
 **Verified 2026-08-05:** with `%LOCALAPPDATA%\BetterTerminal` deleted, one launch of the Debug build
 recreated `app\` with three files and a 225-byte shim containing zero non-ASCII bytes; `beterm` then
-opened the app from a folder named `projekt-ěščř` **with the console switched to 65001**, from both
+opened the app from a folder named `projekt-Ä›ĹˇÄŤĹ™` **with the console switched to 65001**, from both
 cmd and PowerShell, with the accented folder name correct in the pane header, the status badge and
 `project.json`; the installed copy passes the pane-teardown smoke sequence.
 
@@ -661,7 +922,7 @@ each mean something different by it.
 **Consequences:** three encoding and automation traps are now written down in
 [TIPS #gotchas](TIPS.md#gotchas); the most expensive was that the command interpreter reads a `.cmd`
 in the **OEM** codepage while `Encoding.Default` is the **ANSI** one, so the first shim mangled the
-`á` in the repository path and `beterm` silently started nothing at all. The word "SSH" is now the
+`Ăˇ` in the repository path and `beterm` silently started nothing at all. The word "SSH" is now the
 one allowed protocol name in user-visible text, [RULES #hard-rules](RULES.md#hard-rules).
 
 **Verified on 2026-08-05:** both configurations rebuild zero-error zero-warning; `beterm` typed in a
@@ -759,9 +1020,9 @@ internal semaphore went null under a waiting thread - and an exception escaping 
 terminates the process, hence one pane taking everything.
 **Decision:** Rewrite session teardown in this exact order and adopt four supporting rules, all five
 load-bearing:
-1. **Order:** `CompleteAdding()` → close the pseudo console and the job object (this kills the client
-   and breaks the pipe, which is what actually unblocks a reader parked on a read) → `Join()` both IO
-   threads with a **2 s timeout** → only then dispose the streams, exit event, process handle and
+1. **Order:** `CompleteAdding()` â†’ close the pseudo console and the job object (this kills the client
+   and breaks the pipe, which is what actually unblocks a reader parked on a read) â†’ `Join()` both IO
+   threads with a **2 s timeout** â†’ only then dispose the streams, exit event, process handle and
    queue. Anything whose thread missed the timeout is **left to its finalizer**.
 2. Reader and writer threads **copy their `FileStream` into a local** before looping, so a field
    nulled during dispose cannot cause a `NullReferenceException` on a background thread.
@@ -973,9 +1234,9 @@ the product: a GUI application has no standard handles to inherit. `tools\flood-
 [WORKFLOWS #debugging](WORKFLOWS.md#debugging).
 
 **Hardcoding the repository path inside a PowerShell `-File` script.** Scripts containing the literal
-path `D:\Multi Terminál Window` failed with "path does not exist" though the path plainly existed:
+path `D:\Multi TerminĂˇl Window` failed with "path does not exist" though the path plainly existed:
 **PowerShell 5.1 reads a `-File` script as ANSI unless the file carries a UTF-8 BOM**, and the
-directory name contains a non-ASCII character (the `á` in `Terminál`), so the path was mangled at
+directory name contains a non-ASCII character (the `Ăˇ` in `TerminĂˇl`), so the path was mangled at
 parse time before any file system call. Fix: **pass the path in as a parameter**, which every script
 in `tools\` now does. A BOM also works, but the parameter survives the file being copied, re-saved or
 generated by a tool that emits no BOM. See [TIPS #environment-quirks](TIPS.md#environment-quirks).
@@ -1026,4 +1287,4 @@ generated by a tool that emits no BOM. See [TIPS #environment-quirks](TIPS.md#en
   Its `Write` throws `NotSupportedException` by design and its `OutputReceived` never fires.
 
 ---
-[← CLAUDE.md](CLAUDE.md) · [STRUCTURE](STRUCTURE.md) · [WORKFLOWS](WORKFLOWS.md) · [MEMORY](MEMORY.md)
+[â† CLAUDE.md](CLAUDE.md) Â· [STRUCTURE](STRUCTURE.md) Â· [WORKFLOWS](WORKFLOWS.md) Â· [MEMORY](MEMORY.md)

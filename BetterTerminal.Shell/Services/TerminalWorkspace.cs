@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using BetterTerminal.Interop;
 using BetterTerminal.Shell.ViewModels;
 using BetterTerminal.Shell.Views;
 using BetterTerminal.Terminal;
@@ -18,7 +19,7 @@ namespace BetterTerminal.Shell.Services
     /// starts and tears down sessions, implements the MainViewModel commands, feeds the command
     /// palette, applies settings to every live surface, and persists the layout.
     /// </summary>
-    public sealed class TerminalWorkspace
+    public sealed class TerminalWorkspace : IDockHost
     {
         private const TerminalBackend Backend = TerminalBackend.Automatic;
 
@@ -32,9 +33,13 @@ namespace BetterTerminal.Shell.Services
         private readonly SettingsViewModel _settings = new SettingsViewModel();
 
         private SettingsWindow _settingsWindow;
-        private FilesWindow _filesWindow;
+        private FilesPanel _filesPanel;
         private string _projectDirectory;
         private PersistedProject _project;
+
+        private DockController _docking;
+        private FrameworkElement _paneHost;
+        private DockOverlay _overlay;
 
         public TerminalWorkspace(MainViewModel model, Window owner, CommandPalette palette)
         {
@@ -101,11 +106,20 @@ namespace BetterTerminal.Shell.Services
                     _model.Tabs.Add(tab);
                 }
 
+                RestoreFloating(workspace.Floating);
+
                 if (_model.Tabs.Count > 0)
                 {
                     int index = Math.Max(0, Math.Min(_model.Tabs.Count - 1, workspace.SelectedTab));
                     _model.SelectedTab = _model.Tabs[index];
                     FocusFirstPane(_model.SelectedTab);
+                    return;
+                }
+
+                // Every tab was torn off into a window of its own; that is a legitimate layout and
+                // must not be papered over with a fresh tab.
+                if (_docking != null && _docking.FloatingWindows.Count > 0)
+                {
                     return;
                 }
             }
@@ -142,6 +156,7 @@ namespace BetterTerminal.Shell.Services
                 workspace.Tabs.Add(persisted);
             }
 
+            workspace.Floating = CaptureFloating();
             SessionStore.Save(workspace);
         }
 
@@ -386,34 +401,139 @@ namespace BetterTerminal.Shell.Services
 
         private void OpenConnections()
         {
-            ConnectionsViewModel model = new ConnectionsViewModel();
-            foreach (PersistedConnection saved in ConnectionStore.Load())
+            // Opened as a floating pane, not as a window of its own kind: that is the same window a
+            // torn-off pane gets, so its header docks by being dragged and the connection list needs
+            // to be taught nothing about docking. It is modeless for the same reason - a modal
+            // dialog owns the pointer, and there would be no drag to track.
+            ToolPaneViewModel leaf = CreateTool(ToolPaneViewModel.ConnectionsKind);
+            _docking.Open(leaf, 820, 520);
+        }
+
+        /// <summary>
+        /// Puts a tool panel into the pane grid beside the focused pane. The panel is the instance
+        /// the window was showing - its open folder, its half-typed entries and its reachability
+        /// checks all carry over, which is the whole point of moving rather than rebuilding.
+        /// </summary>
+        private void DockTool(string kind, string header, FrameworkElement panel)
+        {
+            if (panel == null)
             {
-                model.Add(saved.UserName, saved.Host);
+                return;
             }
 
-            model.Changed += delegate { SaveConnections(model); };
-            model.RefreshRequested += delegate { CheckReachability(model); };
+            DockController.Detach(panel);
 
-            ConnectionsWindow window = new ConnectionsWindow();
-            window.Owner = _owner;
-            window.DataContext = model;
+            ToolPaneViewModel leaf = new ToolPaneViewModel(kind, header, panel);
+            leaf.CloseCommand = new ShellCommand(delegate { CloseTool(leaf); });
 
-            ConnectRequestedEventArgs chosen = null;
-            EventHandler<ConnectRequestedEventArgs> connect = delegate(object sender, ConnectRequestedEventArgs e)
+            IDockHost host = this;
+            DockLeafViewModel target = null;
+            foreach (DockLeafViewModel visible in host.VisibleLeaves)
             {
-                chosen = e;
-                window.Close();
-            };
+                target = visible;
+                break;
+            }
 
-            model.ConnectRequested += connect;
-            CheckReachability(model);
-            window.ShowDialog();
-            model.ConnectRequested -= connect;
-
-            if (chosen != null && chosen.Connection != null)
+            if (target == null)
             {
-                Connect(chosen.Connection, chosen.SeparateWindow);
+                host.InsertAtEdge(leaf, DockSide.Right);
+            }
+            else
+            {
+                host.InsertBeside(leaf, target, DockSide.Right);
+            }
+
+            _model.StatusMessage = header + " is now a pane. Drag its header to pull it out again.";
+        }
+
+        /// <summary>
+        /// Builds a docked tool from the saved layout. The tool comes back empty and reads the world
+        /// afresh; only its place in the grid was saved, because what it was showing belonged to the
+        /// session that ended.
+        /// </summary>
+        private ToolPaneViewModel CreateTool(string kind)
+        {
+            FrameworkElement panel;
+            string header;
+
+            if (kind == ToolPaneViewModel.FilesKind)
+            {
+                FileExplorerViewModel files = new FileExplorerViewModel();
+                files.OpenRequested += delegate { OpenFile(files); };
+                files.SaveRequested += delegate { SaveFile(files); };
+
+                FilesPanel view = new FilesPanel();
+                view.DataContext = files;
+                _filesPanel = view;
+
+                panel = view;
+                header = "Files";
+                ShowFolderIn(files);
+            }
+            else
+            {
+                ConnectionsViewModel connections = new ConnectionsViewModel();
+                foreach (PersistedConnection saved in ConnectionStore.Load())
+                {
+                    connections.Add(saved.UserName, saved.Host);
+                }
+
+                connections.Changed += delegate { SaveConnections(connections); };
+                connections.RefreshRequested += delegate { CheckReachability(connections); };
+                connections.ConnectRequested += delegate(object sender, ConnectRequestedEventArgs e)
+                {
+                    if (e.Connection != null)
+                    {
+                        Connect(e.Connection, e.SeparateWindow);
+                    }
+                };
+
+                ConnectionsPanel view = new ConnectionsPanel();
+                view.DataContext = connections;
+
+                panel = view;
+                header = "Saved connections";
+                CheckReachability(connections);
+            }
+
+            ToolPaneViewModel leaf = new ToolPaneViewModel(kind, header, panel);
+            leaf.CloseCommand = new ShellCommand(delegate { CloseTool(leaf); });
+            return leaf;
+        }
+
+        /// <summary>Points a file explorer at the project folder, or at the focused session's.</summary>
+        private void ShowFolderIn(FileExplorerViewModel model)
+        {
+            string directory = string.IsNullOrEmpty(_projectDirectory)
+                ? WorkingDirectoryForNewSession()
+                : _projectDirectory;
+
+            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            {
+                model.Message = "There is no folder to show yet.";
+                return;
+            }
+
+            model.RootPath = directory;
+            model.Message = "Reading " + directory;
+
+            WorkspaceFiles.Scan(directory, delegate(FileNodeViewModel root)
+            {
+                model.SetRoot(root);
+                model.Message = root == null
+                    ? "That folder could not be read."
+                    : "Pick a file on the left to open it.";
+            });
+        }
+
+        private void CloseTool(ToolPaneViewModel leaf)
+        {
+            IDockHost host = this;
+            host.RemoveLeaf(leaf);
+
+            if (leaf.Kind == ToolPaneViewModel.FilesKind)
+            {
+                _filesPanel = null;
             }
         }
 
@@ -687,6 +807,312 @@ namespace BetterTerminal.Shell.Services
 
             SetActivePane(created);
             FocusLater(created);
+        }
+
+        private List<PersistedFloating> CaptureFloating()
+        {
+            List<PersistedFloating> windows = new List<PersistedFloating>();
+            if (_docking == null)
+            {
+                return windows;
+            }
+
+            foreach (FloatingPaneWindow window in _docking.FloatingWindows)
+            {
+                PersistedNode node = CaptureNode(window.Leaf);
+                if (node == null)
+                {
+                    continue;
+                }
+
+                Rect32 bounds = window.Bounds;
+                windows.Add(new PersistedFloating
+                {
+                    Left = bounds.Left,
+                    Top = bounds.Top,
+                    Width = bounds.Width,
+                    Height = bounds.Height,
+                    Node = node,
+                });
+            }
+
+            return windows;
+        }
+
+        private void RestoreFloating(List<PersistedFloating> windows)
+        {
+            if (windows == null || _docking == null)
+            {
+                return;
+            }
+
+            foreach (PersistedFloating persisted in windows)
+            {
+                DockLeafViewModel leaf = RestoreNode(persisted.Node) as DockLeafViewModel;
+                if (leaf == null)
+                {
+                    continue;
+                }
+
+                _docking.Restore(leaf, new Rect32
+                {
+                    Left = persisted.Left,
+                    Top = persisted.Top,
+                    Right = persisted.Left + persisted.Width,
+                    Bottom = persisted.Top + persisted.Height,
+                });
+            }
+        }
+
+        // ===== docking: the pane tree seen as something leaves can be moved in and out of =====
+
+        /// <summary>
+        /// Told about the elements docking draws on once the window has built them. The workspace is
+        /// constructed before the window's tree exists, so this cannot be a constructor argument.
+        /// </summary>
+        public void AttachDocking(FrameworkElement paneHost, DockOverlay overlay)
+        {
+            _paneHost = paneHost;
+            _overlay = overlay;
+            _docking = new DockController(this);
+        }
+
+        public DockController Docking
+        {
+            get { return _docking; }
+        }
+
+        FrameworkElement IDockHost.PaneHost
+        {
+            get { return _paneHost; }
+        }
+
+        DockOverlay IDockHost.Overlay
+        {
+            get { return _overlay; }
+        }
+
+        Window IDockHost.Owner
+        {
+            get { return _owner; }
+        }
+
+        IEnumerable<DockLeafViewModel> IDockHost.VisibleLeaves
+        {
+            get
+            {
+                return _model.SelectedTab == null
+                    ? new List<DockLeafViewModel>()
+                    : Leaves(_model.SelectedTab.RootPane);
+            }
+        }
+
+        void IDockHost.Report(string message)
+        {
+            _model.StatusMessage = message;
+        }
+
+        void IDockHost.FocusLeaf(DockLeafViewModel leaf)
+        {
+            PaneViewModel pane = leaf as PaneViewModel;
+            if (pane == null)
+            {
+                return;
+            }
+
+            SetActivePane(pane);
+            FocusLater(pane);
+        }
+
+        void IDockHost.CloseLeaf(DockLeafViewModel leaf)
+        {
+            PaneViewModel pane = leaf as PaneViewModel;
+            if (pane != null && pane.Surface != null)
+            {
+                pane.Surface.CloseSession();
+            }
+        }
+
+        /// <summary>
+        /// Lifts a leaf out of the tree, leaving whatever shared its split in its place. Nothing is
+        /// closed: the caller is moving the leaf, not ending it.
+        /// </summary>
+        void IDockHost.RemoveLeaf(DockLeafViewModel leaf)
+        {
+            TabViewModel tab = FindTabOf(leaf);
+            if (tab == null)
+            {
+                return;
+            }
+
+            SplitViewModel parent = FindParent(tab.RootPane, leaf);
+            if (parent == null)
+            {
+                // It was the whole tab. The tab goes with it - an empty one would be a tab that
+                // shows nothing and cannot be split back into use.
+                tab.RootPane = null;
+                DropTab(tab);
+                return;
+            }
+
+            object sibling = parent.Other(leaf);
+            SplitViewModel grandparent = FindParent(tab.RootPane, parent);
+
+            if (grandparent == null)
+            {
+                tab.RootPane = sibling;
+            }
+            else
+            {
+                grandparent.Replace(parent, sibling);
+            }
+
+            PaneViewModel next = FirstPane(sibling);
+            if (next != null)
+            {
+                SetActivePane(next);
+            }
+        }
+
+        void IDockHost.InsertBeside(DockLeafViewModel leaf, DockLeafViewModel target, DockSide side)
+        {
+            TabViewModel tab = FindTabOf(target);
+            if (tab == null)
+            {
+                ((IDockHost)this).InsertAtEdge(leaf, side);
+                return;
+            }
+
+            SplitViewModel split = Branch(leaf, target, side);
+            SplitViewModel parent = FindParent(tab.RootPane, target);
+
+            if (parent == null)
+            {
+                tab.RootPane = split;
+            }
+            else
+            {
+                parent.Replace(target, split);
+            }
+
+            _model.SelectedTab = tab;
+        }
+
+        void IDockHost.InsertAtEdge(DockLeafViewModel leaf, DockSide side)
+        {
+            TabViewModel tab = _model.SelectedTab;
+            if (tab == null)
+            {
+                tab = new TabViewModel();
+                tab.Title = leaf.HeaderText;
+                tab.FullTitle = leaf.HeaderText;
+                _model.Tabs.Add(tab);
+                _model.SelectedTab = tab;
+            }
+
+            if (tab.RootPane == null)
+            {
+                tab.RootPane = leaf;
+                return;
+            }
+
+            SplitViewModel split = Branch(leaf, tab.RootPane, side);
+            tab.RootPane = split;
+        }
+
+        void IDockHost.Replace(DockLeafViewModel leaf, DockLeafViewModel target)
+        {
+            TabViewModel tab = FindTabOf(target);
+            if (tab == null)
+            {
+                ((IDockHost)this).InsertAtEdge(leaf, DockSide.Right);
+                return;
+            }
+
+            SplitViewModel parent = FindParent(tab.RootPane, target);
+            if (parent == null)
+            {
+                tab.RootPane = leaf;
+            }
+            else
+            {
+                parent.Replace(target, leaf);
+            }
+
+            _model.SelectedTab = tab;
+        }
+
+        /// <summary>
+        /// The split that puts <paramref name="leaf"/> on the given side of <paramref name="other"/>.
+        /// Left and Top mean the leaf goes first; the split's orientation follows from the axis.
+        /// </summary>
+        private static SplitViewModel Branch(DockLeafViewModel leaf, object other, DockSide side)
+        {
+            bool stacked = side == DockSide.Top || side == DockSide.Bottom;
+            bool leafFirst = side == DockSide.Left || side == DockSide.Top;
+
+            SplitViewModel split = stacked
+                ? (SplitViewModel)new RowSplitViewModel()
+                : new ColumnSplitViewModel();
+
+            split.First = leafFirst ? leaf : other;
+            split.Second = leafFirst ? other : leaf;
+            return split;
+        }
+
+        private TabViewModel FindTabOf(DockLeafViewModel leaf)
+        {
+            foreach (TabViewModel tab in _model.Tabs)
+            {
+                if (Leaves(tab.RootPane).Contains(leaf))
+                {
+                    return tab;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>Removes an emptied tab without touching any session.</summary>
+        private void DropTab(TabViewModel tab)
+        {
+            int index = _model.Tabs.IndexOf(tab);
+            _model.Tabs.Remove(tab);
+
+            if (_model.Tabs.Count == 0)
+            {
+                _model.SelectedTab = null;
+                _model.RaiseActivePaneChanged();
+                return;
+            }
+
+            _model.SelectedTab = _model.Tabs[Math.Max(0, Math.Min(_model.Tabs.Count - 1, index))];
+        }
+
+        private static List<DockLeafViewModel> Leaves(object node)
+        {
+            List<DockLeafViewModel> leaves = new List<DockLeafViewModel>();
+            CollectLeaves(node, leaves);
+            return leaves;
+        }
+
+        private static void CollectLeaves(object node, List<DockLeafViewModel> leaves)
+        {
+            DockLeafViewModel leaf = node as DockLeafViewModel;
+            if (leaf != null)
+            {
+                leaves.Add(leaf);
+                return;
+            }
+
+            SplitViewModel split = node as SplitViewModel;
+            if (split == null)
+            {
+                return;
+            }
+
+            CollectLeaves(split.First, leaves);
+            CollectLeaves(split.Second, leaves);
         }
 
         private void CloseActivePane()
@@ -1009,42 +1435,21 @@ namespace BetterTerminal.Shell.Services
         /// </summary>
         private void OpenFiles()
         {
-            if (_filesWindow != null)
+            // A floating pane, the same window a torn-off pane gets, so dragging its header docks it.
+            // Only one explorer at a time: a second would scan the same folder and the two would
+            // disagree about what is saved.
+            if (_filesPanel != null)
             {
-                _filesWindow.Activate();
-                return;
+                FloatingPaneWindow existing = _docking.WindowFor(_filesPanel);
+                if (existing != null)
+                {
+                    existing.Activate();
+                    return;
+                }
             }
 
-            FileExplorerViewModel model = new FileExplorerViewModel();
-            model.OpenRequested += delegate { OpenFile(model); };
-            model.SaveRequested += delegate { SaveFile(model); };
-
-            _filesWindow = new FilesWindow();
-            _filesWindow.Owner = _owner;
-            _filesWindow.DataContext = model;
-            _filesWindow.Closed += delegate { _filesWindow = null; };
-            _filesWindow.Show();
-
-            string directory = string.IsNullOrEmpty(_projectDirectory)
-                ? WorkingDirectoryForNewSession()
-                : _projectDirectory;
-
-            if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
-            {
-                model.Message = "There is no folder to show yet.";
-                return;
-            }
-
-            model.RootPath = directory;
-            model.Message = "Reading " + directory;
-
-            WorkspaceFiles.Scan(directory, delegate(FileNodeViewModel root)
-            {
-                model.SetRoot(root);
-                model.Message = root == null
-                    ? "That folder could not be read."
-                    : "Pick a file on the left to open it.";
-            });
+            ToolPaneViewModel leaf = CreateTool(ToolPaneViewModel.FilesKind);
+            _docking.Open(leaf, 1020, 660);
         }
 
         private void OpenFile(FileExplorerViewModel model)
@@ -1252,6 +1657,15 @@ namespace BetterTerminal.Shell.Services
                 return leaf;
             }
 
+            ToolPaneViewModel tool = node as ToolPaneViewModel;
+            if (tool != null)
+            {
+                PersistedNode leaf = new PersistedNode();
+                leaf.Kind = PersistedNode.ToolKind;
+                leaf.Tool = tool.Kind;
+                return leaf;
+            }
+
             SplitViewModel split = node as SplitViewModel;
             if (split == null)
             {
@@ -1277,6 +1691,11 @@ namespace BetterTerminal.Shell.Services
             if (node.Kind == PersistedNode.PaneKind)
             {
                 return CreatePane(FindShell(node.ShellName), node.WorkingDirectory);
+            }
+
+            if (node.Kind == PersistedNode.ToolKind)
+            {
+                return CreateTool(node.Tool);
             }
 
             object first = RestoreNode(node.First);

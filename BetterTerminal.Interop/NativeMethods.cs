@@ -172,6 +172,21 @@ namespace BetterTerminal.Interop
         public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int nWidth, int nHeight, bool bRepaint);
         // user32, winuser.h MoveWindow.
 
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetCursorPos(out Point32 lpPoint);
+        // user32, winuser.h GetCursorPos. Physical screen pixels, whatever the per-monitor scale.
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetWindowRect(IntPtr hWnd, out Rect32 lpRect);
+        // user32, winuser.h GetWindowRect. Includes the frame, in physical screen pixels.
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool ScreenToClient(IntPtr hWnd, ref Point32 lpPoint);
+        // user32, winuser.h ScreenToClient.
+
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
@@ -205,6 +220,35 @@ namespace BetterTerminal.Interop
             int message,
             int action,
             IntPtr changeInfo);
+
+        /// <summary>MONITOR_DEFAULTTONEAREST - the monitor a window is mostly on.</summary>
+        public const uint MonitorDefaultToNearest = 0x00000002;
+
+        /// <summary>WM_GETMINMAXINFO.</summary>
+        public const int WmGetMinMaxInfo = 0x0024;
+
+        [DllImport("user32.dll")]
+        public static extern IntPtr MonitorFromWindow(IntPtr hWnd, uint dwFlags);
+        // user32, winuser.h MonitorFromWindow. Returns a monitor handle, never null with
+        // MONITOR_DEFAULTTONEAREST, so there is no error to check.
+
+        /// <summary>SM_CXSIZEFRAME - the width of the sizing border.</summary>
+        public const int SmSizeFrameWidth = 32;
+
+        /// <summary>SM_CYSIZEFRAME - the height of the sizing border.</summary>
+        public const int SmSizeFrameHeight = 33;
+
+        /// <summary>SM_CXPADDEDBORDER - the padding added to a caption-bearing frame.</summary>
+        public const int SmPaddedBorder = 92;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MonitorInfo lpmi);
+
+        [DllImport("user32.dll")]
+        public static extern int GetSystemMetrics(int nIndex);
+        // user32, winuser.h GetSystemMetrics. Returns 0 both for an unknown index and for a metric
+        // that really is zero, so there is nothing to check.
+        // user32, winuser.h GetMonitorInfoW. The caller sets lpmi.Size first.
 
         [DllImport("ntdll.dll")]
         public static extern int RtlGetVersion(ref OsVersionInfo versionInformation);

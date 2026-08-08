@@ -4,16 +4,14 @@ using BetterTerminal.Shell.ViewModels;
 
 namespace BetterTerminal.Shell.Views
 {
-    public partial class FilesWindow : Window
+    /// <summary>
+    /// The file explorer as a plain panel, at home in a window or as a leaf of the pane grid.
+    /// </summary>
+    public partial class FilesPanel : UserControl
     {
-        public FilesWindow()
+        public FilesPanel()
         {
             InitializeComponent();
-        }
-
-        private void OnClose(object sender, RoutedEventArgs e)
-        {
-            Close();
         }
 
         /// <summary>

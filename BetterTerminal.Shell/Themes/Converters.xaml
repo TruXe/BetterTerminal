@@ -2,4 +2,8 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:conv="clr-namespace:BetterTerminal.Shell.Converters">
     <conv:BoolToVisibilityConverter x:Key="Bt.BoolToVisibility"/>
+
+    <!-- Threshold is the width at which the wide form of a label stops fitting; the tool panels
+         shed words rather than clip them. -->
+    <conv:IsNarrowConverter x:Key="Bt.IsNarrow" Threshold="230"/>
 </ResourceDictionary>

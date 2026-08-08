@@ -1,0 +1,195 @@
+<UserControl x:Class="BetterTerminal.Shell.Views.ConnectionsPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:BetterTerminal.Shell.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:ConnectionsViewModel, IsDesignTimeCreatable=True}"
+             Background="{DynamicResource Bt.SurfaceBackgroundBrush}"
+             Foreground="{DynamicResource Bt.TextFillPrimaryBrush}"
+             FontFamily="{DynamicResource Bt.Font.Ui}"
+             FontSize="{DynamicResource Bt.FontSize.Body}">
+
+    <!-- The address book without a frame around it, so the same instance can sit in a window or in
+         the pane grid. It carries no caption and no close button: whatever hosts it owns those. -->
+
+    <UserControl.Resources>
+        <!-- The one status carrier: a filled heart for a host that answered, an outline for one
+             that did not. Shape and colour move together, and the tooltip says it in words. -->
+        <Style x:Key="Bt.ReachabilityHeart" TargetType="TextBlock" BasedOn="{StaticResource Bt.Text.Icon}">
+            <Setter Property="Text" Value="&#xEB51;"/>
+            <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillTertiaryBrush}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static vm:ConnectionStatus.Reachable}">
+                    <Setter Property="Text" Value="&#xEB52;"/>
+                    <Setter Property="Foreground" Value="{DynamicResource Bt.StatusSuccessBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Status}" Value="{x:Static vm:ConnectionStatus.Unreachable}">
+                    <Setter Property="Foreground" Value="{DynamicResource Bt.StatusErrorBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Both sides are star-width with a minimum and a splitter between them, so narrowing the pane
+         takes from both rather than eating the list alone. The form scrolls instead of clipping. -->
+    <Grid Margin="20,18,20,18">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" MinWidth="185"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="1.1*" MinWidth="215"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ===== the list ===== -->
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Two columns, not one cell: overlaid on top of each other the label and the button
+                 collide the moment the pane is narrow. -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                           Style="{StaticResource Bt.Text.Overline}"
+                           TextTrimming="CharacterEllipsis" Text="Connections"/>
+                <Button Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource Bt.Button.Chrome}"
+                        Command="{Binding RefreshCommand}"
+                        ToolTip="Check every connection again"
+                        AutomationProperties.Name="Check every connection again">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="12" Text="&#xE72C;"/>
+                        <!-- The word goes when there is no room for it; the icon and the tooltip
+                             still say what the button does. -->
+                        <TextBlock Margin="7,0,0,0" VerticalAlignment="Center" Text="Check again">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Value="True">
+                                            <DataTrigger.Binding>
+                                                <Binding RelativeSource="{RelativeSource AncestorType=Grid}"
+                                                         Path="ActualWidth"
+                                                         Converter="{StaticResource Bt.IsNarrow}"/>
+                                            </DataTrigger.Binding>
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+            </Grid>
+
+            <Border Grid.Row="1" Margin="0,10,0,0" Style="{StaticResource Bt.Card}">
+                <ListBox Style="{StaticResource Bt.ListBox.Plain}" Margin="6"
+                         ItemsSource="{Binding Connections}"
+                         SelectedItem="{Binding Selected, Mode=TwoWay}"
+                         AutomationProperties.Name="Saved connections">
+                    <ListBox.ItemContainerStyle>
+                        <!-- Without a name the row announces its view-model type. -->
+                        <Style TargetType="ListBoxItem" BasedOn="{StaticResource Bt.RowItem}">
+                            <Setter Property="AutomationProperties.Name" Value="{Binding Display}"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:ConnectionViewModel}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                           Style="{StaticResource Bt.ReachabilityHeart}"
+                                           ToolTip="{Binding StatusDescription}"/>
+                                <StackPanel Grid.Column="1" Margin="12,0,8,0" VerticalAlignment="Center">
+                                    <TextBlock Style="{StaticResource Bt.Text.Body}" Text="{Binding Display}"/>
+                                    <TextBlock Style="{StaticResource Bt.Text.Caption}"
+                                               Text="{Binding StatusDescription}"/>
+                                </StackPanel>
+                                <!-- Connect where the row is: reaching for the button at the bottom
+                                     means selecting first and looking away from what was picked. -->
+                                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                    <Button Width="28" Height="28"
+                                            Style="{StaticResource Bt.Button.Icon}"
+                                            Command="{Binding ConnectCommand}"
+                                            ToolTip="Connect to this host"
+                                            AutomationProperties.Name="Connect to this host">
+                                        <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="12" Text="&#xE8AF;"/>
+                                    </Button>
+                                    <Button Width="28" Height="28"
+                                            Style="{StaticResource Bt.Button.Icon}"
+                                            Command="{Binding RemoveCommand}"
+                                            ToolTip="Remove this connection"
+                                            AutomationProperties.Name="Remove this connection">
+                                        <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="12" Text="&#xE74D;"/>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+        </Grid>
+
+        <GridSplitter Grid.Column="1" Style="{StaticResource Bt.GridSplitter}"
+                      Margin="9,0,9,0" VerticalAlignment="Stretch"
+                      AutomationProperties.Name="Resize the connection list"/>
+
+        <!-- ===== add and connect ===== -->
+        <!-- Scrolls rather than clips: this side has a fixed stack of fields and the pane can be
+             made shorter than they are. -->
+        <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+            <TextBlock Style="{StaticResource Bt.Text.Overline}" Text="Add a connection"/>
+
+            <TextBlock Margin="0,10,0,6" Style="{StaticResource Bt.Text.Caption}" Text="User name"/>
+            <TextBox Style="{StaticResource Bt.TextBox}"
+                     Text="{Binding NewUserName, UpdateSourceTrigger=PropertyChanged}"
+                     AutomationProperties.Name="User name"/>
+
+            <TextBlock Margin="0,12,0,6" Style="{StaticResource Bt.Text.Caption}" Text="Address"/>
+            <TextBox Style="{StaticResource Bt.TextBox}"
+                     Text="{Binding NewHost, UpdateSourceTrigger=PropertyChanged}"
+                     AutomationProperties.Name="Address"/>
+
+            <Button Margin="0,14,0,0" HorizontalAlignment="Left" MinWidth="92"
+                    Style="{StaticResource Bt.Button.Secondary}"
+                    Command="{Binding SaveCommand}" Content="Save"
+                    AutomationProperties.Name="Save this connection"/>
+
+            <Rectangle Height="1" Margin="0,20,0,20" Fill="{DynamicResource Bt.StrokeSubtleBrush}"/>
+
+            <TextBlock Style="{StaticResource Bt.Text.Overline}" Text="Open the connection"/>
+            <!-- Wraps instead of running off the edge when the pane is narrow. -->
+            <WrapPanel Margin="0,10,0,0" Orientation="Horizontal">
+                <RadioButton Style="{StaticResource Bt.Segment}" GroupName="Target"
+                             IsChecked="{Binding OpensInGrid, Mode=TwoWay}"
+                             Content="In the pane grid"/>
+                <RadioButton Style="{StaticResource Bt.Segment}" GroupName="Target"
+                             IsChecked="{Binding OpensInSeparateWindow, Mode=TwoWay}"
+                             Content="In a separate window"/>
+            </WrapPanel>
+
+            <TextBlock Margin="0,14,0,0" Style="{StaticResource Bt.Text.MonoSmall}"
+                       TextWrapping="Wrap" TextTrimming="None"
+                       Text="{Binding Selected.CommandLine}"/>
+
+            <Button Margin="0,14,0,0" HorizontalAlignment="Left" MinWidth="120"
+                    Style="{StaticResource Bt.Button.Accent}"
+                    Command="{Binding ConnectCommand}" Content="Connect"
+                    AutomationProperties.Name="Connect to the selected host"/>
+
+            <TextBlock Margin="0,14,0,0" Style="{StaticResource Bt.Text.Caption}"
+                       TextWrapping="Wrap" TextTrimming="None" Text="{Binding Message}"/>
+        </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

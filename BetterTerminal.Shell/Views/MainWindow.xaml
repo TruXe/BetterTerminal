@@ -49,7 +49,8 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>   <!-- tab actions -->
+                <ColumnDefinition Width="Auto"/>   <!-- window buttons -->
             </Grid.ColumnDefinitions>
 
             <Control Grid.Column="0" Style="{StaticResource Bt.BrandMark}" Width="17" Height="17"
@@ -116,6 +117,13 @@
                         AutomationProperties.Name="Open a session with a specific profile">
                     <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE70D;"/>
                 </Button>
+            </StackPanel>
+
+            <!-- Their own column: sharing one with the tab actions stacks the two panels on top of
+                 each other. Without the chrome flag the frame treats them as title bar and the
+                 clicks drag the window instead of pressing the button. -->
+            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top"
+                        shell:WindowChrome.IsHitTestVisibleInChrome="True">
                 <Button Style="{StaticResource Bt.Button.Caption}" Click="OnMinimize"
                         AutomationProperties.Name="Minimize">
                     <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE921;"/>
@@ -254,7 +262,10 @@
         <!-- ============ row 2: pane tree for the selected tab ============ -->
         <Border Grid.Row="2" Background="{DynamicResource Bt.SurfaceBackgroundBrush}"
                 Padding="{DynamicResource Bt.Space.PaneGutter}">
-            <ContentControl Content="{Binding SelectedTab.RootPane}"
+          <Grid>
+            <!-- The overlay shares this cell with the pane host, so a docking rectangle measured
+                 against one lands exactly on the other. -->
+            <ContentControl x:Name="PaneHost" Content="{Binding SelectedTab.RootPane}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
                 <ContentControl.Resources>
                     <!-- A pane tree is recursive: leaf renders a session, branch renders a splitter. -->
@@ -282,11 +293,19 @@
                                     <RowDefinition Height="*"/>
                                 </Grid.RowDefinitions>
 
+                                <!-- Grab this to pull the pane out into a window of its own; the
+                                     handlers live in MainWindow and hand off to the dock
+                                     controller once the pointer has travelled far enough. -->
                                 <Border Grid.Row="0" Height="{DynamicResource Bt.Size.PaneHeaderHeight}"
                                         Background="{DynamicResource Bt.ElevatedBackgroundBrush}"
                                         BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}"
                                         BorderThickness="0,0,0,1"
-                                        CornerRadius="5,5,0,0">
+                                        CornerRadius="5,5,0,0"
+                                        Cursor="SizeAll"
+                                        ToolTip="Drag to pull this pane into its own window"
+                                        PreviewMouseLeftButtonDown="OnPaneHeaderMouseDown"
+                                        PreviewMouseMove="OnPaneHeaderMouseMove"
+                                        PreviewMouseLeftButtonUp="OnPaneHeaderMouseUp">
                                     <Grid Margin="10,0,6,0">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="Auto"/>
@@ -329,12 +348,76 @@
                         </Border>
                     </DataTemplate>
 
+                    <!-- A tool leaf: same frame, same header grab, same close as a session pane, so
+                         the connection list and the file explorer dock like anything else. -->
+                    <DataTemplate DataType="{x:Type vm:ToolPaneViewModel}">
+                        <Border BorderThickness="1"
+                                CornerRadius="{DynamicResource Bt.Radius.Pane}"
+                                Background="{DynamicResource Bt.SurfaceBackgroundBrush}"
+                                SnapsToDevicePixels="True">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource Bt.StrokeSubtleBrush}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsFocused}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Bt.AccentFillDefaultBrush}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+
+                                <Border Grid.Row="0" Height="{DynamicResource Bt.Size.PaneHeaderHeight}"
+                                        Background="{DynamicResource Bt.ElevatedBackgroundBrush}"
+                                        BorderBrush="{DynamicResource Bt.StrokeSubtleBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        CornerRadius="5,5,0,0"
+                                        Cursor="SizeAll"
+                                        ToolTip="Drag to pull this tool into its own window"
+                                        PreviewMouseLeftButtonDown="OnPaneHeaderMouseDown"
+                                        PreviewMouseMove="OnPaneHeaderMouseMove"
+                                        PreviewMouseLeftButtonUp="OnPaneHeaderMouseUp">
+                                    <Grid Margin="10,0,6,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                                   Style="{StaticResource Bt.Text.Icon}" FontSize="12"
+                                                   Text="{Binding Glyph}"/>
+                                        <TextBlock Grid.Column="1" Margin="8,0,8,0" VerticalAlignment="Center"
+                                                   Style="{StaticResource Bt.Text.MonoSmall}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   Text="{Binding HeaderText}"/>
+                                        <Button Grid.Column="2" Width="20" Height="20"
+                                                Style="{StaticResource Bt.Button.Icon}"
+                                                Command="{Binding CloseCommand}"
+                                                AutomationProperties.Name="Close this pane">
+                                            <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE711;"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+
+                                <ContentPresenter Grid.Row="1" Content="{Binding Content}"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+
                     <DataTemplate DataType="{x:Type vm:ColumnSplitViewModel}">
                         <Grid>
+                            <!-- The minimums are what stop a drag from collapsing a pane to nothing;
+                                 the splitter clamps against them rather than running to the edge. -->
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="{Binding FirstLength, Mode=TwoWay}" MinWidth="120"/>
+                                <ColumnDefinition Width="{Binding FirstLength, Mode=TwoWay}"
+                                                  MinWidth="{DynamicResource Bt.Size.PaneMinWidth}"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="{Binding SecondLength, Mode=TwoWay}" MinWidth="120"/>
+                                <ColumnDefinition Width="{Binding SecondLength, Mode=TwoWay}"
+                                                  MinWidth="{DynamicResource Bt.Size.PaneMinWidth}"/>
                             </Grid.ColumnDefinitions>
                             <ContentControl Grid.Column="0" Content="{Binding First}"
                                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
@@ -349,9 +432,11 @@
                     <DataTemplate DataType="{x:Type vm:RowSplitViewModel}">
                         <Grid>
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="{Binding FirstLength, Mode=TwoWay}" MinHeight="90"/>
+                                <RowDefinition Height="{Binding FirstLength, Mode=TwoWay}"
+                                               MinHeight="{DynamicResource Bt.Size.PaneMinHeight}"/>
                                 <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="{Binding SecondLength, Mode=TwoWay}" MinHeight="90"/>
+                                <RowDefinition Height="{Binding SecondLength, Mode=TwoWay}"
+                                               MinHeight="{DynamicResource Bt.Size.PaneMinHeight}"/>
                             </Grid.RowDefinitions>
                             <ContentControl Grid.Row="0" Content="{Binding First}"
                                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
@@ -364,6 +449,9 @@
                     </DataTemplate>
                 </ContentControl.Resources>
             </ContentControl>
+
+            <views:DockOverlay x:Name="Docking"/>
+          </Grid>
         </Border>
 
         <!-- ============ row 3: status strip - shell, path, exit code, nothing else ============ -->

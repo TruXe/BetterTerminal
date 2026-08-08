@@ -15,10 +15,17 @@ namespace BetterTerminal.Terminal
         private const double MaximumFontSize = 36;
         private const int WheelLinesPerNotch = 3;
 
+        // A thin lane on the right edge. The lane is wider than the thumb so it is easy to grab; the
+        // thumb itself stays slim to keep it unobtrusive over the output.
+        private const double ScrollbarLaneWidth = 12;
+        private const double ScrollbarThumbWidth = 4;
+        private const double ScrollbarMinThumb = 28;
+
         private static readonly TimeSpan FrameInterval = TimeSpan.FromMilliseconds(16);
         private static readonly TimeSpan CaretBlinkInterval = TimeSpan.FromMilliseconds(530);
 
         private readonly VisualCollection _visuals;
+        private readonly DrawingVisual _scrollbar = new DrawingVisual();
         private readonly DispatcherTimer _frameTimer;
         private readonly DispatcherTimer _caretTimer;
         private readonly Dictionary<int, Brush> _brushes = new Dictionary<int, Brush>();
@@ -44,6 +51,15 @@ namespace BetterTerminal.Terminal
         private bool _caretBlinks = true;
         private bool _selecting;
         private bool _hasSelection;
+        private bool _draggingScrollbar;
+        private double _scrollbarGrab;
+
+        // The scrollbar thumb from the last paint, in this element's coordinates, so a drag can hit
+        // it without recomputing the layout.
+        private bool _scrollbarShown;
+        private double _scrollbarThumbTop;
+        private double _scrollbarThumbHeight;
+        private int _scrollbarRange;
         private int _anchorLine;
         private int _anchorColumn;
         private int _activeLine;
@@ -342,7 +358,14 @@ namespace BetterTerminal.Terminal
             base.OnMouseLeftButtonDown(e);
             Focus();
 
-            PointToCell(e.GetPosition(this), out _anchorLine, out _anchorColumn);
+            Point position = e.GetPosition(this);
+            if (BeginScrollbarDrag(position))
+            {
+                e.Handled = true;
+                return;
+            }
+
+            PointToCell(position, out _anchorLine, out _anchorColumn);
             _activeLine = _anchorLine;
             _activeColumn = _anchorColumn;
             _hasSelection = false;
@@ -355,6 +378,12 @@ namespace BetterTerminal.Terminal
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
+
+            if (_draggingScrollbar)
+            {
+                ScrollToThumb(e.GetPosition(this).Y);
+                return;
+            }
 
             if (!_selecting)
             {
@@ -369,6 +398,14 @@ namespace BetterTerminal.Terminal
         protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e)
         {
             base.OnMouseLeftButtonUp(e);
+
+            if (_draggingScrollbar)
+            {
+                _draggingScrollbar = false;
+                ReleaseMouseCapture();
+                DrawScrollbar();
+                return;
+            }
 
             if (_selecting)
             {
@@ -511,6 +548,13 @@ namespace BetterTerminal.Terminal
 
         private void RebuildVisuals(int rows)
         {
+            // The scrollbar is one extra visual on top of the rows. Pull it out so the row-count
+            // arithmetic is about rows alone, then re-append it as the last, top-most child.
+            if (_visuals.Contains(_scrollbar))
+            {
+                _visuals.Remove(_scrollbar);
+            }
+
             while (_visuals.Count > rows)
             {
                 _visuals.RemoveAt(_visuals.Count - 1);
@@ -520,6 +564,8 @@ namespace BetterTerminal.Terminal
             {
                 _visuals.Add(new DrawingVisual());
             }
+
+            _visuals.Add(_scrollbar);
 
             _renderedVersions = new long[rows];
             for (int row = 0; row < rows; row++)
@@ -549,6 +595,11 @@ namespace BetterTerminal.Terminal
 
         private void ScrollBy(int lines)
         {
+            ScrollTo(_scrollOffset + lines);
+        }
+
+        private void ScrollTo(int offset)
+        {
             if (_grid == null)
             {
                 return;
@@ -557,10 +608,13 @@ namespace BetterTerminal.Terminal
             int maximum;
             lock (_grid.SyncRoot)
             {
-                maximum = Math.Max(0, _grid.TotalLines - _grid.Rows);
+                // Stop at the first line that has anything on it, not at the start of the history.
+                // Blank lines get into the history whenever the pane is made shorter, and scrolling
+                // up into that emptiness - past the banner the session opened with - looks broken.
+                maximum = Math.Max(0, _grid.TotalLines - _grid.Rows - _grid.FirstUsedLine);
             }
 
-            int offset = Math.Max(0, Math.Min(maximum, _scrollOffset + lines));
+            offset = Math.Max(0, Math.Min(maximum, offset));
             if (offset == _scrollOffset)
             {
                 return;
@@ -569,6 +623,46 @@ namespace BetterTerminal.Terminal
             _scrollOffset = offset;
             _fullRedraw = true;
             RenderViewport();
+        }
+
+        private bool BeginScrollbarDrag(Point position)
+        {
+            if (!_scrollbarShown || position.X < ActualWidth - ScrollbarLaneWidth)
+            {
+                return false;
+            }
+
+            // On the thumb, keep the pointer's grip within it; on the lane elsewhere, jump the thumb
+            // under the pointer and carry on dragging from its middle.
+            if (position.Y >= _scrollbarThumbTop && position.Y < _scrollbarThumbTop + _scrollbarThumbHeight)
+            {
+                _scrollbarGrab = position.Y - _scrollbarThumbTop;
+            }
+            else
+            {
+                _scrollbarGrab = _scrollbarThumbHeight / 2;
+            }
+
+            _draggingScrollbar = true;
+            CaptureMouse();
+            ScrollToThumb(position.Y);
+            DrawScrollbar();
+            return true;
+        }
+
+        private void ScrollToThumb(double pointerY)
+        {
+            double travel = ActualHeight - _scrollbarThumbHeight;
+            if (travel <= 0 || _scrollbarRange <= 0)
+            {
+                return;
+            }
+
+            double thumbTop = Math.Max(0, Math.Min(travel, pointerY - _scrollbarGrab));
+
+            // The top of the track is the oldest reachable line, the bottom is the live output.
+            double fraction = 1 - (thumbTop / travel);
+            ScrollTo((int)Math.Round(fraction * _scrollbarRange));
         }
 
         private void RenderViewport()
@@ -581,7 +675,7 @@ namespace BetterTerminal.Terminal
             lock (_grid.SyncRoot)
             {
                 int rows = _grid.Rows;
-                if (_visuals.Count != rows || _renderedVersions == null || _renderedVersions.Length != rows)
+                if (_visuals.Count != rows + 1 || _renderedVersions == null || _renderedVersions.Length != rows)
                 {
                     RebuildVisuals(rows);
                     _fullRedraw = true;
@@ -613,6 +707,74 @@ namespace BetterTerminal.Terminal
                 }
 
                 _fullRedraw = false;
+            }
+
+            DrawScrollbar();
+        }
+
+        private void DrawScrollbar()
+        {
+            double height = ActualHeight;
+            double width = ActualWidth;
+
+            int rows;
+            int range;
+            int offset = _scrollOffset;
+            if (_grid == null)
+            {
+                rows = 0;
+                range = 0;
+            }
+            else
+            {
+                lock (_grid.SyncRoot)
+                {
+                    rows = _grid.Rows;
+                    range = Math.Max(0, _grid.TotalLines - rows - _grid.FirstUsedLine);
+                }
+            }
+
+            _scrollbarRange = range;
+
+            if (range <= 0 || rows <= 0 || height <= 0 || width <= 0)
+            {
+                _scrollbarShown = false;
+                using (_scrollbar.RenderOpen())
+                {
+                }
+
+                return;
+            }
+
+            double usable = rows + range;
+            double thumbHeight = Math.Max(ScrollbarMinThumb, height * rows / usable);
+            double travel = height - thumbHeight;
+
+            // Offset 0 is the live bottom, so the thumb sits at the bottom then; the top of the
+            // track is the oldest line that can be reached.
+            double fraction = (double)offset / range;
+            double thumbTop = (1 - fraction) * travel;
+
+            _scrollbarShown = true;
+            _scrollbarThumbTop = thumbTop;
+            _scrollbarThumbHeight = thumbHeight;
+
+            double thumbLeft = width - ((ScrollbarLaneWidth + ScrollbarThumbWidth) / 2);
+            double radius = ScrollbarThumbWidth / 2;
+
+            Color fg = DefaultForeground;
+            byte thumbAlpha = (byte)(_draggingScrollbar ? 0x9A : (offset > 0 ? 0x62 : 0x38));
+            Brush thumb = new SolidColorBrush(Color.FromArgb(thumbAlpha, fg.R, fg.G, fg.B));
+            thumb.Freeze();
+            Brush track = new SolidColorBrush(Color.FromArgb(0x12, fg.R, fg.G, fg.B));
+            track.Freeze();
+
+            using (DrawingContext context = _scrollbar.RenderOpen())
+            {
+                context.DrawRoundedRectangle(track, null,
+                    new Rect(thumbLeft, 0, ScrollbarThumbWidth, height), radius, radius);
+                context.DrawRoundedRectangle(thumb, null,
+                    new Rect(thumbLeft, thumbTop, ScrollbarThumbWidth, thumbHeight), radius, radius);
             }
         }
 

@@ -84,6 +84,13 @@
     <sys:Double x:Key="Bt.Size.IconMedium">16</sys:Double>
     <sys:Double x:Key="Bt.Size.SplitterThickness">6</sys:Double>
 
+    <!-- How small a splitter may make a pane. The floor is what keeps a drag from collapsing a pane
+         into a sliver that cannot be read or grabbed back: the header alone is 28, so anything much
+         under this is a title bar with a hairline of terminal beneath it. Sized so a 1280-wide
+         window still takes five columns side by side. -->
+    <sys:Double x:Key="Bt.Size.PaneMinWidth">200</sys:Double>
+    <sys:Double x:Key="Bt.Size.PaneMinHeight">130</sys:Double>
+
     <CornerRadius x:Key="Bt.Radius.Control">5</CornerRadius>
     <CornerRadius x:Key="Bt.Radius.Card">7</CornerRadius>
     <CornerRadius x:Key="Bt.Radius.Pane">6</CornerRadius>

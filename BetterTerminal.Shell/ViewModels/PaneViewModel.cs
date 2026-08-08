@@ -1,4 +1,4 @@
-using System.Windows.Input;
+using System.Windows;
 using System.Windows.Media;
 using BetterTerminal.Shell.Views;
 using BetterTerminal.Terminal;
@@ -6,9 +6,8 @@ using BetterTerminal.Terminal;
 namespace BetterTerminal.Shell.ViewModels
 {
     /// <summary>A leaf pane: one terminal session plus the state its header shows.</summary>
-    public class PaneViewModel : ObservableObject
+    public class PaneViewModel : DockLeafViewModel
     {
-        private bool _isFocused;
         private bool _isDropTarget;
         private string _workingDirectory;
         private string _shellDescription;
@@ -35,17 +34,29 @@ namespace BetterTerminal.Shell.ViewModels
         /// <summary>The live terminal, hosted by the pane template. Null in design-time data.</summary>
         public TerminalSurface Surface { get; private set; }
 
-        public bool IsFocused
+        /// <summary>The header shows where the session was started, which is what identifies it.</summary>
+        public override string HeaderText
         {
-            get { return _isFocused; }
+            get { return string.IsNullOrEmpty(_workingDirectory) ? "Session" : _workingDirectory; }
+        }
 
-            set
-            {
-                if (Set(ref _isFocused, value))
-                {
-                    Raise("FocusDotBrush");
-                }
-            }
+        public override FrameworkElement Content
+        {
+            get { return Surface; }
+        }
+
+        /// <summary>
+        /// A session on the hosted-console fallback backend is a real console window parented into
+        /// this one; moving that to another top-level window loses the child, so it stays put.
+        /// </summary>
+        public override bool CanFloat
+        {
+            get { return Surface != null && Surface.CanReparent; }
+        }
+
+        public override string FloatRefusal
+        {
+            get { return "This session runs in a hosted console window and cannot be moved out."; }
         }
 
         public bool IsDropTarget
@@ -57,7 +68,13 @@ namespace BetterTerminal.Shell.ViewModels
         public string WorkingDirectory
         {
             get { return _workingDirectory; }
-            set { Set(ref _workingDirectory, value); }
+            set
+            {
+                if (Set(ref _workingDirectory, value))
+                {
+                    Raise("HeaderText");
+                }
+            }
         }
 
         public string ShellDescription
@@ -129,7 +146,10 @@ namespace BetterTerminal.Shell.ViewModels
             get { return _hasExited ? "exit " + _lastExitCode : "running"; }
         }
 
-        public ICommand CloseCommand { get; set; }
+        protected override void OnFocusChanged()
+        {
+            Raise("FocusDotBrush");
+        }
 
         /// <summary>Re-reads every themed brush after the theme or scheme slot changed.</summary>
         public void RefreshBrushes()

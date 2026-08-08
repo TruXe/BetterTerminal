@@ -92,6 +92,16 @@ namespace BetterTerminal.Shell.ViewModels
             ConnectionViewModel connection = new ConnectionViewModel(userName, host);
             ConnectionViewModel captured = connection;
             connection.RemoveCommand = new ShellCommand(delegate { Remove(captured); });
+
+            // Its own connect, so a row can be opened where it sits. The one at the bottom acts on
+            // the selection and stays: it is the target of the keyboard, and it is what says which
+            // command line is about to run.
+            connection.ConnectCommand = new ShellCommand(delegate
+            {
+                Selected = captured;
+                Connect();
+            });
+
             Connections.Add(connection);
         }
 
