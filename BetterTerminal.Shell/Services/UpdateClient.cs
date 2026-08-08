@@ -4,7 +4,7 @@ using System.IO.Pipes;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
-using BetterTerminal.Shell.Views;
+using BetterTerminal.Notifications;
 using BetterTerminal.Updating;
 
 namespace BetterTerminal.Shell.Services
@@ -149,13 +149,25 @@ namespace BetterTerminal.Shell.Services
             _presenting = true;
             _shown = version;
 
-            UpdateToastWindow toast = new UpdateToastWindow(version, delegate
+            // The same notification the service raises when the application is closed, shown here in
+            // its own running session. "Restart now" applies the staged build and relaunches; leaving
+            // it be keeps the live session untouched and applies on the next start instead.
+            ToastNotification toast = new ToastNotification
+            {
+                AppName = "BetterTerminal",
+                Title = "Update ready",
+                Message = "Version " + UpdateShared.NormalizedString(version) +
+                    " is ready. It installs when you restart BetterTerminal.",
+                Duration = TimeSpan.FromSeconds(12)
+            };
+
+            toast.Actions.Add(new ToastAction("Restart now", delegate
             {
                 if (UpdateApply.Launch(launcher))
                 {
                     Application.Current.Shutdown();
                 }
-            });
+            }));
 
             toast.Closed += delegate { _presenting = false; };
             toast.Show();

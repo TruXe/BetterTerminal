@@ -105,6 +105,19 @@ open threads below.
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
 
+### 2026-08-09 - The running-app update notice uses the library too (1.4.6)
+
+1.4.5 shipped the notification library but left the **running-app** notice on the old
+`UpdateToastWindow` (the amber "Restart now" card) - only the service-closed path was switched. So a
+user on a live session still saw the old toast. `UpdateClient.Present` now builds a
+`ToastNotification` directly (the shell references the library) with a single "Restart now" action
+wired to the same `UpdateApply.Launch` + `Application.Current.Shutdown`; `UpdateToastWindow` is
+deleted. Both paths - closed (service `--notify`) and running (in-app) - are now the same acrylic
+window. Note the old behaviour a user sees before updating is their *installed* pre-1.4.6 build; the
+change only shows once 1.4.6 is installed. The service remains a poller (default 4 h, first poll ~1
+min after it starts), not a push - "real-time while closed" is bounded by that interval; the app
+checks at once on open.
+
 ### 2026-08-09 - The notification is its own library (`BetterTerminal.Notifications.dll`)
 
 **Context.** The `ToastEnabled=0` finding killed the WinRT route for good: the user's account has the
