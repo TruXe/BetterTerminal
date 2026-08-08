@@ -105,6 +105,16 @@ open threads below.
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
 
+### 2026-08-09 - Service-driven update notice confirmed; poll settled at 15 min (1.4.8)
+
+End-to-end proof on frant's machine: with BetterTerminal **closed**, publishing v1.4.7.1 had the
+service notice it, stage it and raise the app-drawn toast on its own - the Application event log shows
+"Staged update 1.4.7.1." and "Notified the user of update 1.4.7.1." The whole notification chain
+(service poll -> app-drawn Windows 11 toast, and the service self-upgrade to a current binary) is
+working. The testing 15 s poll was raised to **15 minutes** for the release (`UpdateShared.
+DefaultPollInterval`, initial delay back to 1 min); `BETERM_UPDATE_POLL_SECONDS` still overrides.
+1.4.8 is the first release carrying the finished feature at a sane cadence.
+
 ### 2026-08-09 - The service upgrades itself; real-time is a 15 s poll for now (1.4.7)
 
 **The bug behind "the service never notifies."** The installed service was **1.4.0.0** - from before
