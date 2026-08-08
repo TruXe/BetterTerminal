@@ -3,6 +3,7 @@ using System.Configuration.Install;
 using System.IO;
 using System.Reflection;
 using System.ServiceProcess;
+using Microsoft.Win32;
 
 namespace BetterTerminal.Service
 {
@@ -48,7 +49,34 @@ namespace BetterTerminal.Service
             }
 
             ManagedInstallerClass.InstallHelper(new[] { canonical });
+
+            // The managed installer records the image path from the assembly it loaded, and because
+            // the update binary and the canonical file are byte-identical the loader hands back the
+            // already-loaded update binary - so the registration would point at beterm-service-update
+            // .exe and lock it, defeating the whole never-locked scheme. Pin the image path back to the
+            // canonical file so the service always runs from there and the update binary stays free.
+            SetImagePath(canonical);
             StartService();
+        }
+
+        private static void SetImagePath(string canonical)
+        {
+            try
+            {
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(
+                    @"SYSTEM\CurrentControlSet\Services\" + HostService.Name, true))
+                {
+                    if (key != null)
+                    {
+                        key.SetValue("ImagePath", "\"" + canonical + "\"", RegistryValueKind.ExpandString);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Best effort: if the image path could not be corrected the service still runs from
+                // wherever it was registered; the next upgrade attempt corrects it again.
+            }
         }
 
         public static void Uninstall()
