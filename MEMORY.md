@@ -13,11 +13,23 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-08 (1.4.1).** Self-update from the latest GitHub release, driven by the Windows
+service and shown as a corner notice in the application's own style; panes and the two tools dock by
+dragging their header; a fine terminal scrollbar; splitter minimums. The newest
+[decision-log](#decision-log) entries have the detail.
+
 **Update 2026-08-08 (1.4.0).** The splitter between two panes moves the boundary between them, both
 directions, on both axes. It was resizing its own gutter column instead - a growing empty strip one
 way, a dead splitter the other - because the style let `GridSplitter` fall back to its own default
 alignment of `Right`. Direction and behaviour are now stated outright in both splitter styles; the
-newest [decision-log](#decision-log) entry has the measurements.
+decision-log entry has the measurements.
+
+**Update 2026-08-08 (1.3.2).** Two keyboard faults the 1.3.1 change left behind are fixed. **Escape**
+did nothing at all: honouring win32 input mode made the host stop resolving a lone escape byte, and
+only typed text had been converted to whole key events - every other key still went as classic VT.
+**Ctrl+C and Ctrl+V** did not copy or paste; they sent the raw control bytes, so the only working
+gestures were Ctrl+Shift+C/V and a right-click. Ctrl+C now copies when there is a selection and still
+interrupts when there is not. The newest [decision-log](#decision-log) entry has the measurements.
 
 **Update 2026-08-08 (1.3.1).** Keyboard input reaches a session as whole key events now, not as bare
 characters the console host had to guess a key for. That guess used the **system default** keyboard
@@ -264,6 +276,48 @@ Driven through a probe that builds the same grids the two `DataTemplate`s build 
 `MinWidth` on either side. Rows on 600 px: down 60 gives 357/237, up 120 gives 237/357, clamping at
 `MinHeight` 90. `FirstRatio` on the view model tracked every drag (0.5 -> 0.58 -> 0.42 -> 0.879), so
 `TerminalWorkspace` persists and restores what the user set.
+### 2026-08-08 - Escape and the plain clipboard keys, the two halves 1.3.1 left broken (1.3.2)
+
+**Context.** Reported as "I can't copy and paste", then "Escape doesn't work but right-click paste
+does". That pairing is what split the problem in two: the right-click path proves the session, the
+grid and the clipboard are all healthy, so nothing was wrong with writing to the session or reading
+the clipboard.
+
+**Cause, Escape.** A regression from 1.3.1, and the interesting kind: the change was correct but
+partial. Honouring win32 input mode tells the host to stop guessing keys from bare characters - and
+`CSI ? 9001 h` arrives in the first bytes of **every** session, so the mode is always on. Only
+`OnTextInput` was converted. `OnPreviewKeyDown` still emitted classic VT, which is fine for every key
+that has an unambiguous form - `CR` for Enter, `CSI D` for Left, all complete - but a lone escape
+byte is also how every sequence begins. The host's parser holds it waiting for the rest and the key
+never lands. That is precisely the ambiguity win32 input mode exists to remove, so Escape is the one
+key that had to be converted along with the text.
+
+**Cause, clipboard.** Not a regression at all, and not in the drag-and-drop commit the report
+suspected. `Ctrl+C` and `Ctrl+V` were never bound: `EncodeControl` turns them into `0x03` and `0x16`,
+so only `Ctrl+Shift+C`/`Ctrl+Shift+V` and the right-click reached the clipboard. Copying itself
+always worked - measured, with the selection, the built string and `Clipboard.SetText` all confirmed
+in a driven run before anything was changed.
+
+**Decision.** Send Escape as `CSI vk ; scan ; char ; down ; controls ; repeat _` when the grid
+reports win32 input mode, via a new `VtKeyEncoder.EncodeKeyEvent`, and leave every other key on its
+VT form. Converting all of them would be a larger change with nothing to gain: they are unambiguous
+and they work today. The rewrite is keyed off the produced sequence being a lone escape, so
+`Ctrl+[` - which encodes to the same byte - is carried with it.
+
+**Decision.** Bind `Ctrl+C` to copy **only when a selection exists**, and drop the selection after
+copying so the next `Ctrl+C` is the interrupt again; with nothing selected it falls through
+untouched. `Ctrl+V` pastes. This is what the platform's own terminal does, and it keeps the interrupt
+reachable at all times, which a bare "Ctrl+C is copy" binding would not.
+
+**Verified.** Both configurations rebuild zero-error, zero-warning, and `BUILD\` is staged at 1.3.2.
+Measured against the running app, driving real Win32 input, not synthetic routed events. Before the
+fix: typing `THIS-SHOULD-VANISH` and pressing Escape left the text on the line. After: the line is
+clear. `Ctrl+C` over a selection moved the text to the clipboard - it went from a sentinel value to
+the selected text - and `Ctrl+V` typed it back onto the prompt. `Ctrl+C` with nothing selected
+stopped `ping -n 30` after five replies, so the interrupt survives. A dead end worth not repeating:
+a probe hosting `ConPtySession` from a console PowerShell is useless, because the child inherits that
+console instead of the pseudo console and both `OutputReceived` and the grid stay empty; the app
+itself, plus screenshots, is the reliable harness. See [TIPS](TIPS.md#gotchas).
 
 ### 2026-08-08 - Typed characters are sent as whole key events, because the host was guessing the key (1.3.1)
 

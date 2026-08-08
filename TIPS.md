@@ -14,6 +14,22 @@ of them exist.
 
 ## Gotchas
 
+**In win32 input mode a lone escape byte never becomes a key.** Symptom: Escape does nothing in a
+pane while Enter, the arrows and everything typed work normally. Cause: the host asks for whole key
+events with `CSI ? 9001 h` in the first bytes of every session, and from then on a bare `\x1b` is
+read as the start of a sequence and held for the rest that never comes. Every other key this window
+sends is unambiguous - `CR`, `CSI D` - so only Escape is affected, which is exactly the ambiguity the
+mode exists to remove. Fix: `TerminalRenderer.OnPreviewKeyDown` rewrites a lone escape into
+`VtKeyEncoder.EncodeKeyEvent`. [MEMORY](MEMORY.md#decision-log)
+
+**A probe that hosts `ConPtySession` from a console process measures nothing.** Symptom:
+`OutputReceived` never fires and the grid stays empty, while the child's own output appears in your
+console. Cause: the child inherits the caller's console instead of the pseudo console, so the session
+is not driving it; `FreeConsole` first does not reliably help either. It costs an hour before you
+notice the empty capture is the harness, not the bug. Diagnose keyboard and clipboard behaviour by
+driving the real app with `SendKeys`/`mouse_event` and reading screenshots plus the clipboard.
+[MEMORY](MEMORY.md#decision-log)
+
 **A bare character makes the console host guess the key - against the wrong keyboard layout.**
 Symptom: in a `choice.exe` menu (the `ai.bat` launcher, for one) `1` to `9` do nothing while `q`
 works, and an English layout changes nothing. Cause: the host maps the character back to a key with

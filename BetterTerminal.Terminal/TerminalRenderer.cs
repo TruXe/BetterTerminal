@@ -294,9 +294,22 @@ namespace BetterTerminal.Terminal
             }
 
             if ((modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.V)
+                || (modifiers == ModifierKeys.Control && e.Key == Key.V)
                 || (modifiers == ModifierKeys.Shift && e.Key == Key.Insert))
             {
                 Paste();
+                e.Handled = true;
+                return;
+            }
+
+            // Ctrl+C copies what is selected and drops the selection, so the next Ctrl+C is the
+            // interrupt again. With nothing selected it falls through and interrupts as it always
+            // has - the key keeps both meanings, and which one applies is on screen.
+            if (modifiers == ModifierKeys.Control && e.Key == Key.C && _hasSelection)
+            {
+                CopySelection();
+                _hasSelection = false;
+                _fullRedraw = true;
                 e.Handled = true;
                 return;
             }
@@ -309,15 +322,24 @@ namespace BetterTerminal.Terminal
             }
 
             bool applicationCursorKeys;
+            bool wholeKeyEvents;
             lock (_grid.SyncRoot)
             {
                 applicationCursorKeys = _grid.ApplicationCursorKeys;
+                wholeKeyEvents = _grid.Win32InputMode;
             }
 
             string sequence = VtKeyEncoder.Encode(e.Key, modifiers, applicationCursorKeys);
             if (sequence == null)
             {
                 return;
+            }
+
+            // A lone escape is the one sequence a host asking for whole key events cannot resolve,
+            // because it is also how every other sequence starts. State the key instead.
+            if (wholeKeyEvents && sequence == "\x1b")
+            {
+                sequence = VtKeyEncoder.EncodeKeyEvent(e.Key, '\x1b', modifiers);
             }
 
             ScrollToBottom();

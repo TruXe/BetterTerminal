@@ -77,6 +77,42 @@ namespace BetterTerminal.Terminal
             return encoded.ToString();
         }
 
+        /// <summary>
+        /// Encodes one key press as a whole key event for a console host that asked for them.
+        /// </summary>
+        /// <remarks>
+        /// Escape is the reason this exists. Every other key this window sends is either a printable
+        /// character or a complete sequence - <c>CSI D</c> for Left, carriage return for Enter - and a
+        /// host in win32 input mode still resolves those. A lone escape byte is the one input that
+        /// stays ambiguous: it is also how every sequence begins, so the host's parser holds it
+        /// waiting for the rest and the key never arrives. Stating the key removes the ambiguity.
+        /// </remarks>
+        public static string EncodeKeyEvent(Key key, char character, ModifierKeys modifiers)
+        {
+            int virtualKey = KeyInterop.VirtualKeyFromKey(key);
+            int controlState = 0;
+
+            if ((modifiers & ModifierKeys.Shift) != 0)
+            {
+                controlState |= ShiftPressed;
+            }
+
+            if ((modifiers & ModifierKeys.Control) != 0)
+            {
+                controlState |= LeftControlPressed;
+            }
+
+            if ((modifiers & ModifierKeys.Alt) != 0)
+            {
+                controlState |= LeftAltPressed;
+            }
+
+            StringBuilder encoded = new StringBuilder(64);
+            AppendKeyEvent(encoded, virtualKey, character, controlState, true);
+            AppendKeyEvent(encoded, virtualKey, character, controlState, false);
+            return encoded.ToString();
+        }
+
         // Virtual key, scan code, character, key down, control key state, repeat count. The scan
         // code is left at zero: it describes the physical key, which nothing downstream reads.
         private static void AppendKeyEvent(
