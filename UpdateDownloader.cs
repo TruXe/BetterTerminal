@@ -1,24 +1,26 @@
 using System;
 using System.IO;
 using System.Net;
-using BetterTerminal.Updating;
 
-namespace BetterTerminal.Service
+namespace BetterTerminal.Updating
 {
     /// <summary>
-    /// Brings the release asset into the staging folder and hands back its path, but only once it is
-    /// on disk in full and its file version really is newer than what is installed. A partial or
-    /// mislabelled download is discarded rather than staged, so the application is never sent at a
-    /// launcher that is not actually the upgrade it claims to be.
+    /// Brings the release asset into a staging folder and hands back its path, but only once it is on
+    /// disk in full and its file version really is newer than what is installed. A partial or
+    /// mislabelled download is discarded rather than staged, so nothing is ever run as an upgrade
+    /// that is not actually the upgrade it claims to be.
+    ///
+    /// Shared by the service, which stages into ProgramData for the app-closed case, and the
+    /// application, which stages into its own profile for the notice it raises itself; the folder is
+    /// the caller's to choose.
     /// </summary>
     internal static class UpdateDownloader
     {
-        public static string Stage(ReleaseInfo release, Version installed)
+        public static string Stage(ReleaseInfo release, Version installed, string stagingDirectory)
         {
-            Directory.CreateDirectory(UpdateShared.StagingDirectory);
+            Directory.CreateDirectory(stagingDirectory);
 
-            string destination = Path.Combine(
-                UpdateShared.StagingDirectory, UpdateShared.StagedFileName(release.Version));
+            string destination = Path.Combine(stagingDirectory, UpdateShared.StagedFileName(release.Version));
 
             Version already = UpdateShared.FileVersion(destination);
             if (already != null && already == UpdateShared.Normalize(release.Version))

@@ -77,6 +77,22 @@ namespace BetterTerminal.Updating
             get { return Path.Combine(BaseDirectory, "staging"); }
         }
 
+        /// <summary>
+        /// Where the application stages a build it downloaded itself - under its own profile, which
+        /// is always writable by the user, unlike the machine-wide folder the service writes to.
+        /// </summary>
+        public static string AppStagingDirectory
+        {
+            get
+            {
+                return Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "BetterTerminal",
+                    "update",
+                    "staging");
+            }
+        }
+
         public static string InstalledRecordPath
         {
             get { return Path.Combine(BaseDirectory, "installed.txt"); }

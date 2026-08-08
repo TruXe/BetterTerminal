@@ -147,6 +147,12 @@
     <Compile Include="..\UpdateShared.cs">
       <Link>Updating\UpdateShared.cs</Link>
     </Compile>
+    <Compile Include="..\ReleaseFeed.cs">
+      <Link>Updating\ReleaseFeed.cs</Link>
+    </Compile>
+    <Compile Include="..\UpdateDownloader.cs">
+      <Link>Updating\UpdateDownloader.cs</Link>
+    </Compile>
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -216,6 +222,7 @@
     <Compile Include="Services\SelfInstall.cs" />
     <Compile Include="Services\UpdateApply.cs" />
     <Compile Include="Services\UpdateClient.cs" />
+    <Compile Include="Services\UpdateProbe.cs" />
     <Compile Include="Services\ServiceInstall.cs" />
     <Compile Include="Services\ShellPresentation.cs" />
     <Compile Include="Services\StartupOptions.cs" />

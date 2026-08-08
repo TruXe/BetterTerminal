@@ -13,6 +13,13 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-08 (1.4.3).** The application checks the release feed itself, at start and then
+hourly, and shows its own corner notice - so a new version is announced at once instead of only when
+the service polls. 1.4.1 was silent because the application only listened on the service's pipe and
+never checked on its own; the shared `ReleaseFeed`/`UpdateDownloader` now serve both. Verified by
+launching the built app against the test feed: the styled notice appeared on start with no service
+involved.
+
 **Update 2026-08-08 (1.4.2).** The service now updates and notifies on its own when nothing of ours
 is running: it shows a message in the user's session with `WTSSendMessage` and installs the update
 there with `CreateProcessAsUser`, so an update lands even with the application closed. The

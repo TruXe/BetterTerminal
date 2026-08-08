@@ -22,7 +22,7 @@ namespace BetterTerminal.Service
                 return null;
             }
 
-            string launcher = UpdateDownloader.Stage(release, installed);
+            string launcher = UpdateDownloader.Stage(release, installed, UpdateShared.StagingDirectory);
             if (launcher == null)
             {
                 return null;

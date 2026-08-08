@@ -1,8 +1,7 @@
 using System;
 using System.Net;
-using BetterTerminal.Updating;
 
-namespace BetterTerminal.Service
+namespace BetterTerminal.Updating
 {
     internal sealed class ReleaseInfo
     {
@@ -22,6 +21,9 @@ namespace BetterTerminal.Service
     /// Finds the latest published release without an API token or JSON. The web endpoint
     /// /releases/latest answers a 302 to /releases/tag/&lt;tag&gt;, so a single request with redirects
     /// turned off yields the tag from the Location header and nothing is downloaded to read it.
+    ///
+    /// Shared: the service polls it in the background and the application asks it directly at start,
+    /// so a new release is seen at once without waiting on the service's next poll.
     /// </summary>
     internal static class ReleaseFeed
     {
