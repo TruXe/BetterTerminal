@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-05
+updated: 2026-08-08
 scope: Why BetterTerminal is built the way it is - decisions, unfinished threads, dead ends and vocabulary, for a reader returning cold.
 stability: evolving
 sources: [session context packet 2026-08-04, source under D:\Multi Terminál Window after the design import, docs/_archive/2026-08-04/, tools/*.ps1, user answers]
@@ -65,6 +65,30 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-08 - The tab actions live in the caption strip, not in a band of their own
+
+**Context.** The new-tab plus and the profile chevron sat 7 px lower than minimise, maximise and
+close, at a different glyph size and with rounded corners, so the top right of the window read as two
+unrelated rows. The user asked for one line.
+
+**Decision.** They are caption buttons now: `Bt.Button.CaptionAccessory`, the caption template with
+a **square 32 px target** instead of the 46 px window-control one, in the same stack panel as the
+window buttons and top aligned with them. Both glyphs are 10 pt like every other glyph in that strip.
+The plus was 14 pt - that was the size difference, not an illusion.
+
+**Decision.** The band is a token now: `Bt.Size.WindowButtonHeight` (32) and
+`Bt.Size.CaptionAccessoryWidth` (32) in `Primitives.xaml`, and `Bt.Button.Caption` reads the height
+from it rather than carrying a literal 32. Alignment is structural - move the band and all five
+buttons move together, which is what stops this from drifting apart again.
+
+**Decision.** They moved out of the tab strip's column into the window-button column, so the grid
+keeps the tabs clear of them; before, both lived in the star-width column and tabs could slide
+underneath. The 8 px gap after the chevron is deliberate: it keeps the plus off the minimise target.
+
+**Verified.** `Release|x64` and `Debug|x64` both build zero-error, zero-warning; `BUILD\` staged at
+1.3.0. Captured with `PrintWindow`: the five glyphs sit on one line. No version bump - `SelfInstall`
+replaces at the same version by file timestamp, which is exactly the case it was written for.
 
 ### 2026-08-07 - Code is coloured, hand-built, because there is no editor library (1.3.0)
 

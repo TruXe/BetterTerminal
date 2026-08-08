@@ -78,6 +78,8 @@
     <sys:Double x:Key="Bt.Size.ControlHeight">30</sys:Double>
     <sys:Double x:Key="Bt.Size.ControlHeightCompact">26</sys:Double>
     <sys:Double x:Key="Bt.Size.WindowButtonWidth">46</sys:Double>
+    <sys:Double x:Key="Bt.Size.WindowButtonHeight">32</sys:Double>
+    <sys:Double x:Key="Bt.Size.CaptionAccessoryWidth">32</sys:Double>
     <sys:Double x:Key="Bt.Size.IconSmall">14</sys:Double>
     <sys:Double x:Key="Bt.Size.IconMedium">16</sys:Double>
     <sys:Double x:Key="Bt.Size.SplitterThickness">6</sys:Double>

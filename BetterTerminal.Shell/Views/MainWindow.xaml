@@ -102,24 +102,20 @@
                 </TabControl.ItemTemplate>
             </TabControl>
 
-            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right"
-                        VerticalAlignment="Bottom" Margin="6,0,8,3">
-                <Button Style="{StaticResource Bt.Button.Icon}" Width="28" Height="28"
+            <!-- The tab actions sit in the caption strip with the window buttons, one band, one
+                 glyph size; the gap after them is what keeps the plus off the minimise target. -->
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button Style="{StaticResource Bt.Button.CaptionAccessory}"
                         Command="{Binding NewTabCommand}"
-                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
                         AutomationProperties.Name="New tab"
                         ToolTip="New tab (Ctrl+Shift+T)">
-                    <TextBlock Style="{StaticResource Bt.Text.Icon}" Text="&#xE710;"/>
+                    <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE710;"/>
                 </Button>
-                <Button Style="{StaticResource Bt.Button.Icon}" Width="22" Height="28"
+                <Button Style="{StaticResource Bt.Button.CaptionAccessory}" Margin="0,0,8,0"
                         Command="{Binding OpenProfileFlyoutCommand}"
-                        shell:WindowChrome.IsHitTestVisibleInChrome="True"
                         AutomationProperties.Name="Open a session with a specific profile">
                     <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE70D;"/>
                 </Button>
-            </StackPanel>
-
-            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
                 <Button Style="{StaticResource Bt.Button.Caption}" Click="OnMinimize"
                         AutomationProperties.Name="Minimize">
                     <TextBlock Style="{StaticResource Bt.Text.Icon}" FontSize="10" Text="&#xE921;"/>

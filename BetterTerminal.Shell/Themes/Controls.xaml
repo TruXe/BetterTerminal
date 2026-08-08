@@ -106,7 +106,7 @@
         <Setter Property="FontFamily" Value="{DynamicResource Bt.Font.Icon}"/>
         <Setter Property="FontSize" Value="10"/>
         <Setter Property="Width" Value="{DynamicResource Bt.Size.WindowButtonWidth}"/>
-        <Setter Property="Height" Value="32"/>
+        <Setter Property="Height" Value="{DynamicResource Bt.Size.WindowButtonHeight}"/>
         <Setter Property="Foreground" Value="{DynamicResource Bt.TextFillSecondaryBrush}"/>
         <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
         <Setter Property="FocusVisualStyle" Value="{StaticResource Bt.FocusVisual}"/>
@@ -124,6 +124,12 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+    </Style>
+
+    <!-- Tab-strip actions that live in the caption strip: same band, height, fill and hover as a
+         window button, on a square target - they are accessories, not window controls. -->
+    <Style x:Key="Bt.Button.CaptionAccessory" TargetType="Button" BasedOn="{StaticResource Bt.Button.Caption}">
+        <Setter Property="Width" Value="{DynamicResource Bt.Size.CaptionAccessoryWidth}"/>
     </Style>
 
     <Style x:Key="Bt.Button.CaptionClose" TargetType="Button" BasedOn="{StaticResource Bt.Button.Caption}">
