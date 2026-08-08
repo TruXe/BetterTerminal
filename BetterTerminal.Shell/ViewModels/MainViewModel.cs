@@ -15,6 +15,7 @@ namespace BetterTerminal.Shell.ViewModels
         private TabViewModel _selectedTab;
         private ProfileViewModel _defaultProfile;
         private string _projectName;
+        private string _statusMessage;
 
         public MainViewModel()
         {
@@ -99,6 +100,24 @@ namespace BetterTerminal.Shell.ViewModels
         public bool HasProject
         {
             get { return !string.IsNullOrEmpty(_projectName); }
+        }
+
+        public string StatusMessage
+        {
+            get { return _statusMessage; }
+
+            set
+            {
+                if (Set(ref _statusMessage, value))
+                {
+                    Raise("HasStatusMessage");
+                }
+            }
+        }
+
+        public bool HasStatusMessage
+        {
+            get { return !string.IsNullOrEmpty(_statusMessage); }
         }
 
         public void RaiseActivePaneChanged()

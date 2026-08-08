@@ -2,6 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using BetterTerminal.Shell.Services;
 using BetterTerminal.Terminal;
 
 namespace BetterTerminal.Shell.Views
@@ -15,12 +16,15 @@ namespace BetterTerminal.Shell.Views
     {
         private const int InitialColumns = 80;
         private const int InitialRows = 24;
+        private const string VirtualItemFormat = "FileGroupDescriptorW";
 
         private readonly TerminalBackend _backend;
 
         private ITerminalSession _session;
         private TerminalRenderer _renderer;
         private ConsoleHwndHost _consoleHost;
+        private int _dragDepth;
+        private bool _isDropTarget;
 
         public TerminalSurface(ShellProfile shell, string workingDirectory, TerminalBackend backend)
         {
@@ -34,12 +38,24 @@ namespace BetterTerminal.Shell.Views
             HorizontalContentAlignment = HorizontalAlignment.Stretch;
             VerticalContentAlignment = VerticalAlignment.Stretch;
 
+            Background = Brushes.Transparent;
+            AttachDropTarget();
+
             Loaded += OnLoaded;
         }
 
         public event EventHandler<TerminalTitleEventArgs> TitleChanged;
 
         public event EventHandler<TerminalExitEventArgs> Exited;
+
+        public event EventHandler DropTargetChanged;
+
+        public event EventHandler<PaneDropEventArgs> DropReported;
+
+        public bool IsDropTarget
+        {
+            get { return _isDropTarget; }
+        }
 
         public ShellProfile Shell { get; private set; }
 
@@ -117,11 +133,14 @@ namespace BetterTerminal.Shell.Views
         public void Restart()
         {
             CloseSession();
+            AttachDropTarget();
             StartSession();
         }
 
         public void CloseSession()
         {
+            DetachDropTarget();
+
             if (_session == null)
             {
                 return;
@@ -144,6 +163,153 @@ namespace BetterTerminal.Shell.Views
             if (_session == null)
             {
                 StartSession();
+            }
+        }
+
+        private void AttachDropTarget()
+        {
+            AllowDrop = true;
+            DragEnter += OnDragEnter;
+            DragOver += OnDragOver;
+            DragLeave += OnDragLeave;
+            Drop += OnDrop;
+        }
+
+        private void DetachDropTarget()
+        {
+            AllowDrop = false;
+            DragEnter -= OnDragEnter;
+            DragOver -= OnDragOver;
+            DragLeave -= OnDragLeave;
+            Drop -= OnDrop;
+
+            _dragDepth = 0;
+            SetDropTarget(false);
+        }
+
+        private void OnDragEnter(object sender, DragEventArgs e)
+        {
+            _dragDepth++;
+            ApplyEffects(e);
+            SetDropTarget(e.Effects != DragDropEffects.None);
+            e.Handled = true;
+        }
+
+        private void OnDragOver(object sender, DragEventArgs e)
+        {
+            ApplyEffects(e);
+            e.Handled = true;
+        }
+
+        private void OnDragLeave(object sender, DragEventArgs e)
+        {
+            _dragDepth--;
+            if (_dragDepth <= 0)
+            {
+                _dragDepth = 0;
+                SetDropTarget(false);
+            }
+
+            e.Handled = true;
+        }
+
+        private void OnDrop(object sender, DragEventArgs e)
+        {
+            _dragDepth = 0;
+            SetDropTarget(false);
+            e.Handled = true;
+
+            if (!CanAccept(e.Data))
+            {
+                return;
+            }
+
+            e.Effects = DragDropEffects.Copy;
+
+            if (HasPaths(e.Data))
+            {
+                Insert(TextFor(e.Data));
+                return;
+            }
+
+            Report("Those items have no file path yet. Save or copy them to a folder first.");
+        }
+
+        private static void ApplyEffects(DragEventArgs e)
+        {
+            e.Effects = CanAccept(e.Data) ? DragDropEffects.Copy : DragDropEffects.None;
+        }
+
+        private static bool CanAccept(IDataObject data)
+        {
+            return data != null && (HasPaths(data) || data.GetDataPresent(VirtualItemFormat));
+        }
+
+        private static bool HasPaths(IDataObject data)
+        {
+            return data.GetDataPresent(DataFormats.FileDrop) || data.GetDataPresent(DataFormats.UnicodeText);
+        }
+
+        private string TextFor(IDataObject data)
+        {
+            PaneShellKind kind = DroppedPaths.KindOf(Shell, StartupCommand);
+
+            string[] dropped = data.GetData(DataFormats.FileDrop) as string[];
+            if (dropped != null && dropped.Length > 0)
+            {
+                return DroppedPaths.Format(dropped, kind);
+            }
+
+            string text = data.GetData(DataFormats.UnicodeText) as string;
+            return DroppedPaths.Format(DroppedPaths.SplitLines(text), kind);
+        }
+
+        private void Insert(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            if (!Dispatcher.CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action<string>(Insert), text);
+                return;
+            }
+
+            if (_renderer == null || !IsRunning)
+            {
+                Report("This session does not take inserted text.");
+                return;
+            }
+
+            _renderer.PasteText(text);
+            Report(string.Empty);
+            FocusTerminal();
+        }
+
+        private void Report(string message)
+        {
+            EventHandler<PaneDropEventArgs> handler = DropReported;
+            if (handler != null)
+            {
+                handler(this, new PaneDropEventArgs(message));
+            }
+        }
+
+        private void SetDropTarget(bool value)
+        {
+            if (_isDropTarget == value)
+            {
+                return;
+            }
+
+            _isDropTarget = value;
+
+            EventHandler handler = DropTargetChanged;
+            if (handler != null)
+            {
+                handler(this, EventArgs.Empty);
             }
         }
 

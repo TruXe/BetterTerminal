@@ -584,6 +584,12 @@ namespace BetterTerminal.Shell.Services
                 new KeyboardFocusChangedEventHandler(delegate { SetActivePane(pane); }), true);
             surface.Exited += delegate { OnPaneExited(pane); };
 
+            surface.DropTargetChanged += delegate { pane.IsDropTarget = surface.IsDropTarget; };
+            surface.DropReported += delegate(object sender, PaneDropEventArgs e)
+            {
+                _model.StatusMessage = e.Message;
+            };
+
             // The font and the colours only reach a renderer that exists, and the renderer is
             // built when the surface loads, so the settings are pushed again from there.
             surface.Loaded += delegate { ApplySettingsTo(pane); };

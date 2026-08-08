@@ -177,11 +177,14 @@
     </Compile>
     <Compile Include="Views\CodeEditor.cs" />
     <Compile Include="Views\PaletteInputEventArgs.cs" />
+    <Compile Include="Views\PaneDropEventArgs.cs" />
     <Compile Include="Views\TerminalSurface.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Services\AppTheme.cs" />
     <Compile Include="Services\CommandRegistration.cs" />
+    <Compile Include="Services\DroppedPaths.cs" />
     <Compile Include="Services\FileKind.cs" />
+    <Compile Include="Services\PaneShellKind.cs" />
     <Compile Include="Services\HostReachability.cs" />
     <Compile Include="Services\OpenedFile.cs" />
     <Compile Include="Services\SelfInstall.cs" />

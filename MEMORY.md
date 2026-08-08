@@ -66,6 +66,36 @@ open threads below.
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
 
+### 2026-08-08 - A dropped file is text on the input line, quoted for the shell that pane runs
+
+**Context.** Dropping files from the file manager onto a pane should type their paths where the
+pointer is, never where the focus is, and never run anything.
+
+**Decision.** The drop target is `TerminalSurface`, one instance per pane, so the pane under the
+pointer wins by hit testing alone - no focus lookup exists to get wrong. The surface needed a
+transparent background first: a null one is not hit testable and the drag passed straight through.
+Enter and leave are counted, not toggled, so crossing the renderer inside the pane cannot flicker
+the highlight.
+
+**Decision.** Quoting is chosen per pane from its own shell, not once for the application: double
+quotes for the command prompt and only when the path needs them, single quotes doubled for
+PowerShell, `'\''` for the two posix cases, and `/mnt/c/...` for WSL. This application has no WSL
+or SSH profile - SSH is `ssh user@host` typed into a command prompt pane - so the kind is read
+from the startup command first and the executable second. The limit is honest and worth knowing:
+a shell the user reaches by typing `wsl` themselves mid-session still quotes as its profile.
+
+**Decision.** Insertion reuses the paste path, which already reads bracketed paste mode off the
+grid and wraps the text in `ESC [200~` and `ESC [201~`, so a drop onto a pane running something
+cannot corrupt the output stream. Nothing appends a newline. The hosted-console fallback backend
+refuses programmatic input by construction, so a drop there reports a short message instead of
+throwing - and that backend's console window already handles dropped files itself.
+
+**Verified.** Both configurations build zero-error, zero-warning and `BUILD\` is staged. The
+quoting matrix was exercised against the built assembly for all four kinds, including a path with
+a space, one with `&()`, one with an apostrophe, a folder, a drive root and a path carrying CRLF.
+The teardown sequence (split right, split down, new tab, three pane closes) left the process
+alive, which is what covers the revoke added to `CloseSession`.
+
 ### 2026-08-08 - The tab actions live in the caption strip, not in a band of their own
 
 **Context.** The new-tab plus and the profile chevron sat 7 px lower than minimise, maximise and

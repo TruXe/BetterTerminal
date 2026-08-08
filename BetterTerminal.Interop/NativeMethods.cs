@@ -15,6 +15,11 @@ namespace BetterTerminal.Interop
         public const int STD_OUTPUT_HANDLE = -11;
         public const int ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004;
 
+        public const int MSGFLT_ALLOW = 1;
+        public const int WM_COPYGLOBALDATA = 0x0049;
+        public const int WM_COPYDATA = 0x004A;
+        public const int WM_DROPFILES = 0x0233;
+
         // kernel32, processthreadsapi.h: PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE, Windows 10 17763+.
         public static readonly IntPtr PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = (IntPtr)0x00020016;
 
@@ -192,6 +197,14 @@ namespace BetterTerminal.Interop
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
         // user32, winuser.h GetWindowTextW.
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool ChangeWindowMessageFilterEx(
+            IntPtr hWnd,
+            int message,
+            int action,
+            IntPtr changeInfo);
 
         [DllImport("ntdll.dll")]
         public static extern int RtlGetVersion(ref OsVersionInfo versionInformation);

@@ -1,5 +1,8 @@
+using System;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Interop;
+using BetterTerminal.Interop;
 using BetterTerminal.Shell.Services;
 using BetterTerminal.Shell.ViewModels;
 
@@ -24,6 +27,25 @@ namespace BetterTerminal.Shell.Views
 
             Loaded += OnLoaded;
             Closing += OnClosing;
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            AllowDropsFromLowerIntegrityProcesses();
+        }
+
+        private void AllowDropsFromLowerIntegrityProcesses()
+        {
+            IntPtr handle = new WindowInteropHelper(this).Handle;
+            if (handle == IntPtr.Zero)
+            {
+                return;
+            }
+
+            NativeMethods.ChangeWindowMessageFilterEx(handle, NativeMethods.WM_DROPFILES, NativeMethods.MSGFLT_ALLOW, IntPtr.Zero);
+            NativeMethods.ChangeWindowMessageFilterEx(handle, NativeMethods.WM_COPYDATA, NativeMethods.MSGFLT_ALLOW, IntPtr.Zero);
+            NativeMethods.ChangeWindowMessageFilterEx(handle, NativeMethods.WM_COPYGLOBALDATA, NativeMethods.MSGFLT_ALLOW, IntPtr.Zero);
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)

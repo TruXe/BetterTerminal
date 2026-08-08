@@ -170,6 +170,23 @@ namespace BetterTerminal.Terminal
             RenderViewport();
         }
 
+        public void PasteText(string text)
+        {
+            if (_session == null || _grid == null || string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            bool bracketed;
+            lock (_grid.SyncRoot)
+            {
+                bracketed = _grid.BracketedPaste;
+            }
+
+            ScrollToBottom();
+            _session.Write(bracketed ? "\x1b[200~" + text + "\x1b[201~" : text);
+        }
+
         public void Detach()
         {
             if (_session != null)
@@ -839,16 +856,7 @@ namespace BetterTerminal.Terminal
                 return;
             }
 
-            string text = Clipboard.GetText().Replace("\r\n", "\r").Replace("\n", "\r");
-
-            bool bracketed;
-            lock (_grid.SyncRoot)
-            {
-                bracketed = _grid.BracketedPaste;
-            }
-
-            ScrollToBottom();
-            _session.Write(bracketed ? "\x1b[200~" + text + "\x1b[201~" : text);
+            PasteText(Clipboard.GetText().Replace("\r\n", "\r").Replace("\n", "\r"));
         }
 
         private Brush GetBrush(Color color)

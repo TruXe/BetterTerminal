@@ -9,6 +9,7 @@ namespace BetterTerminal.Shell.ViewModels
     public class PaneViewModel : ObservableObject
     {
         private bool _isFocused;
+        private bool _isDropTarget;
         private string _workingDirectory;
         private string _shellDescription;
         private string _badgeText;
@@ -45,6 +46,12 @@ namespace BetterTerminal.Shell.ViewModels
                     Raise("FocusDotBrush");
                 }
             }
+        }
+
+        public bool IsDropTarget
+        {
+            get { return _isDropTarget; }
+            set { Set(ref _isDropTarget, value); }
         }
 
         public string WorkingDirectory

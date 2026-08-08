@@ -270,6 +270,9 @@
                                         <DataTrigger Binding="{Binding IsFocused}" Value="True">
                                             <Setter Property="BorderBrush" Value="{DynamicResource Bt.AccentFillDefaultBrush}"/>
                                         </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsDropTarget}" Value="True">
+                                            <Setter Property="BorderBrush" Value="{DynamicResource Bt.AccentFillDefaultBrush}"/>
+                                        </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
@@ -373,6 +376,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" VerticalAlignment="Center"
                            Style="{StaticResource Bt.Text.BodySecondary}"
@@ -383,7 +387,13 @@
                            Style="{StaticResource Bt.Text.MonoSmall}"
                            Text="{Binding ActivePane.WorkingDirectory}"
                            ToolTip="{Binding ActivePane.WorkingDirectory}"/>
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Grid.Column="3" VerticalAlignment="Center" Margin="14,0,14,0"
+                           Style="{StaticResource Bt.Text.Caption}"
+                           Foreground="{DynamicResource Bt.TextFillSecondaryBrush}"
+                           Text="{Binding StatusMessage}"
+                           ToolTip="{Binding StatusMessage}"
+                           Visibility="{Binding HasStatusMessage, Converter={StaticResource Bt.BoolToVisibility}}"/>
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Center">
                     <Border Style="{StaticResource Bt.Badge}" Margin="0,0,14,0"
                             Visibility="{Binding HasProject, Converter={StaticResource Bt.BoolToVisibility}}">
                         <TextBlock Style="{StaticResource Bt.Text.Caption}"
