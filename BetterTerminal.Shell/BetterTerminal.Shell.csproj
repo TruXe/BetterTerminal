@@ -318,4 +318,14 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- A second, never-run copy of the service binary. A running service locks its own file, so an
+       update cannot replace beterm-service.exe in place; this copy is never a service and so is
+       always replaceable, and the application runs it elevated to upgrade the registered one. It is
+       produced here (not in a script) so both the CI build and the payload carry it. -->
+  <Target Name="ShipServiceUpdateBinary" AfterTargets="Build" Condition="Exists('$(OutDir)beterm-service.exe')">
+    <Copy SourceFiles="$(OutDir)beterm-service.exe"
+          DestinationFiles="$(OutDir)beterm-service-update.exe"
+          SkipUnchangedFiles="false"
+          OverwriteReadOnlyFiles="true" />
+  </Target>
 </Project>

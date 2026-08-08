@@ -105,6 +105,31 @@ open threads below.
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
 
+### 2026-08-09 - The service upgrades itself; real-time is a 15 s poll for now (1.4.7)
+
+**The bug behind "the service never notifies."** The installed service was **1.4.0.0** - from before
+the update feature existed (poll + notify landed 1.4.2+). It never updates: `ServiceInstall.Ensure`
+returned as soon as the service was installed, and a running service **locks its own binary**, so an
+app update cannot replace `beterm-service.exe`. It is frozen at whatever version first registered it.
+So only the running app's self-check ever raised a notice; the service did nothing.
+
+**Fix - a never-locked update binary + an elevated self-upgrade.** The build now ships a second copy,
+`beterm-service-update.exe` (a `Copy` target in the shell csproj `AfterTargets="Build"`, so CI and the
+payload both carry it). Nothing runs it as a service, so an update always replaces it. `ServiceControl.
+Install` is now the upgrade path too: run the update binary elevated and it stops the old service
+(freeing the canonical file), copies the fresh bits onto `beterm-service.exe`, registers that canonical
+path and starts it - the service always runs from the stable path, the update binary is a transient
+installer. App side, `ServiceInstall.UpgradeIfOutdated` compares the update binary's version to the
+registered one and runs it elevated when newer, once per newer version (marker `service-upgrade.txt`).
+So a stuck old service self-heals on the next app start, at the cost of one UAC prompt. Verified live:
+the elevated path took frant's 1.4.0.0 service to 1.4.7.0, Running, canonical path, exit 0.
+
+**Poll cadence is TESTING-aggressive: 15 s** (`UpdateShared.DefaultPollInterval`, initial delay 10 s),
+so a freshly published release is noticed at once while the flow is exercised. **Raise it to minutes
+before this is left in anyone's hands** - 15 s is 240 req/h against the releases/latest redirect.
+`BETERM_UPDATE_POLL_SECONDS` still overrides. Note the service floors "installed" at its own version,
+so to see a closed-app notice the published release must be newer than the *service's* version.
+
 ### 2026-08-09 - The running-app update notice uses the library too (1.4.6)
 
 1.4.5 shipped the notification library but left the **running-app** notice on the old

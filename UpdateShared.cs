@@ -45,11 +45,14 @@ namespace BetterTerminal.Updating
         public const string AssetOverrideVariable = "BETERM_UPDATE_ASSET";
         public const string PollSecondsVariable = "BETERM_UPDATE_POLL_SECONDS";
 
-        public static readonly TimeSpan DefaultPollInterval = TimeSpan.FromHours(4);
+        // TESTING cadence: every 15 seconds, so a freshly published release is noticed at once while
+        // the notification path is being exercised. This is deliberately aggressive and is to be
+        // raised (minutes, not seconds) once the flow is confirmed; BETERM_UPDATE_POLL_SECONDS still
+        // overrides it either way.
+        public static readonly TimeSpan DefaultPollInterval = TimeSpan.FromSeconds(15);
 
-        // A poll runs shortly after the service starts rather than at once, so a machine booting a
-        // dozen services does not have this one reach out over the network in the middle of it.
-        public static readonly TimeSpan InitialPollDelay = TimeSpan.FromMinutes(1);
+        // The first poll runs almost at once during testing, so the service reacts without a wait.
+        public static readonly TimeSpan InitialPollDelay = TimeSpan.FromSeconds(10);
 
         public static string LatestReleaseUrl
         {
