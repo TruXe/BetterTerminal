@@ -80,6 +80,9 @@ namespace BetterTerminal.Terminal
 
         public bool BracketedPaste { get; set; }
 
+        // Set while the console host has asked for whole key events instead of bare characters.
+        public bool Win32InputMode { get; set; }
+
         public bool AlternateScreenActive { get; private set; }
 
         public int CurrentForeground { get; set; }

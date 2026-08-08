@@ -1,9 +1,14 @@
+using System.Text;
 using System.Windows.Input;
 
 namespace BetterTerminal.Terminal
 {
     public static class VtKeyEncoder
     {
+        private const int ShiftPressed = 0x0010;
+        private const int LeftControlPressed = 0x0008;
+        private const int LeftAltPressed = 0x0002;
+
         // Returns null when the key carries no control sequence and should arrive as text input.
         public static string Encode(Key key, ModifierKeys modifiers, bool applicationCursorKeys)
         {
@@ -27,6 +32,63 @@ namespace BetterTerminal.Terminal
             }
 
             return alt ? "\x1b" + sequence : sequence;
+        }
+
+        /// <summary>
+        /// Encodes typed text as whole key events for a console host that asked for them.
+        /// </summary>
+        /// <remarks>
+        /// A host that receives a bare character has to work out which key produced it, and it does
+        /// that against its own keyboard layout - not the one this window is using. Every character
+        /// that needs Shift on that layout then arrives wrapped in separate Shift key events: all of
+        /// 1 to 9 on a Czech layout, and every capital letter on any layout. Programs that read key
+        /// events rather than a line of text stop at the Shift event and never see the character, so
+        /// the key does nothing at all. Sending the key ourselves removes the guess.
+        /// </remarks>
+        public static string EncodeText(string text, Key key, ModifierKeys modifiers)
+        {
+            // A character with no key behind it - composed, or arriving from an input method - is
+            // still delivered: the host passes a key event through on its character alone.
+            int virtualKey = key == Key.None ? 0 : KeyInterop.VirtualKeyFromKey(key);
+            int controlState = 0;
+
+            if ((modifiers & ModifierKeys.Shift) != 0)
+            {
+                controlState |= ShiftPressed;
+            }
+
+            if ((modifiers & ModifierKeys.Control) != 0)
+            {
+                controlState |= LeftControlPressed;
+            }
+
+            if ((modifiers & ModifierKeys.Alt) != 0)
+            {
+                controlState |= LeftAltPressed;
+            }
+
+            StringBuilder encoded = new StringBuilder(text.Length * 32);
+            foreach (char character in text)
+            {
+                AppendKeyEvent(encoded, virtualKey, character, controlState, true);
+                AppendKeyEvent(encoded, virtualKey, character, controlState, false);
+            }
+
+            return encoded.ToString();
+        }
+
+        // Virtual key, scan code, character, key down, control key state, repeat count. The scan
+        // code is left at zero: it describes the physical key, which nothing downstream reads.
+        private static void AppendKeyEvent(
+            StringBuilder encoded, int virtualKey, char character, int controlState, bool down)
+        {
+            encoded.Append("\x1b[")
+                .Append(virtualKey)
+                .Append(";0;")
+                .Append((int)character)
+                .Append(down ? ";1;" : ";0;")
+                .Append(controlState)
+                .Append(";1_");
         }
 
         private static string EncodeControl(Key key, bool shift)

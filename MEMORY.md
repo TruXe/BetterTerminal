@@ -13,6 +13,14 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-08 (1.3.1).** Keyboard input reaches a session as whole key events now, not as bare
+characters the console host had to guess a key for. That guess used the **system default** keyboard
+layout rather than this window's, so on a Czech layout every digit - and on any layout every capital
+letter - arrived wrapped in synthetic Shift records and was dropped by programs that read keys rather
+than lines; `choice.exe`, and therefore the `ai.bat` menus, ignored `1` to `9` while `Q` worked. The
+newest [decision-log](#decision-log) entry has the cause, the measurements and what was deliberately
+left alone.
+
 **Update 2026-08-06 (BETA).** Two new, unverified-by-a-person features landed: a **CLI-AI Wizard**
 profile in the shell picker - a guided launcher for CLI AI agents ported from Deerpfy's `ai.bat`
 into `BetterTerminal.AIWizard` (DLL) plus `beterm-aiwizard.exe` - and a real Windows service host,
@@ -65,6 +73,51 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-08 - Typed characters are sent as whole key events, because the host was guessing the key (1.3.1)
+
+**Context.** Running Deerpfy's `ai.bat` in a pane, its menu ignored `1` to `9` while `Q` worked.
+Reported on a Czech layout and reproduced with the window switched to English as well, which is the
+detail that gives the cause away.
+
+**Cause.** Input was written to the pseudo console as bare characters. The console host then has to
+work out which key produced each character, and it does that with `VkKeyScan` against **its own**
+keyboard layout - the system default, not the layout this window is using, which is why switching
+the window to English changed nothing. Every character that needs Shift on that layout comes out
+wrapped in separate `VK_SHIFT` key-down and key-up records: all of `1` to `9` on a Czech layout, and
+every capital letter on any layout. `choice.exe` reads key records rather than a line, stops at the
+`VK_SHIFT` record and never sees the character. Lower-case letters need no Shift, so `Q` always
+worked. Measured, not assumed: a probe driving the real `ConPtySession` had `choice /c 1234FUQ` fall
+through to its timeout default for `1` and for `F`, and accept `q` at once; a dump of the records
+inside the pseudo console showed `DOWN vk=0x10 SHIFT_PRESSED` ahead of the character every time.
+
+**Decision.** Honour win32 input mode. The host asks for whole key events with `CSI ? 9001 h` in the
+first bytes of every session and BetterTerminal was ignoring the request; `VtParser` now records it
+on the grid as `CellGrid.Win32InputMode`, and `TerminalRenderer.OnTextInput` encodes typed text as
+`CSI vk ; scan ; char ; down ; controls ; repeat _` instead of sending the character alone. The
+guess disappears because the key is stated.
+
+**Decision.** The virtual key comes from `KeyInterop.VirtualKeyFromKey` on the key of the
+`PreviewKeyDown` that precedes the text - no P/Invoke, and the value is derived from **this
+window's** layout, which is the whole point. Sending zero there would have been simpler and does
+satisfy `choice.exe`, but it breaks every program that switches on `ConsoleKey`, `BetterTerminal.Wrap`
+and its `Q` to quit included. The scan code is left at zero: it names the physical key and nothing
+downstream reads it. The real Shift, Ctrl and Alt state is passed through - a separate test proved
+`SHIFT_PRESSED` on the character's own record is harmless, the standalone `VK_SHIFT` records were
+the problem - so a program sees what a real console would show it.
+
+**Decision.** Only typed text changes. Paste still goes as text, because bracketed paste mode wraps
+it in markers that must stay literal, and startup and project commands are whole lines written
+straight to the session. A character with no key behind it - composed, or from an input method -
+reports key zero and is still delivered on its character alone.
+
+**Verified.** Both configurations rebuild zero-error, zero-warning, and `BUILD\` is staged. Driven
+end to end through a real `TerminalRenderer` hosting a real session, raising the same routed events
+WPF raises: mode negotiated true, then `1` gave `RESULT=1`, `F` gave `RESULT=5` and `q` gave
+`RESULT=7` from `choice /c 1234FUQ` - all three keys, where before only `q` answered. The records
+arriving inside the session are now `vk=0x31 char='1'` and `vk=0x51 char='q'` with no modifier
+noise. Regression checks on the line-reading path: `echo hi 123 ABC` typed and entered came back as
+`GOT=[echo hi 123 ABC]`, and the accented `ěščř` round-tripped intact.
 
 ### 2026-08-08 - A dropped file is text on the input line, quoted for the shell that pane runs
 

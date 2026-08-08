@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-05
+updated: 2026-08-08
 scope: Non-obvious, BetterTerminal-specific traps, measured performance facts, diagnosis techniques and machine quirks.
 stability: evolving
 sources: [BetterTerminal.Terminal/ConPtySession.cs, BetterTerminal.Terminal/HwndConsoleSession.cs, BetterTerminal.Terminal/ConsoleHwndHost.cs, BetterTerminal.Terminal/VtKeyEncoder.cs, BetterTerminal.Terminal/TerminalRenderer.cs, BetterTerminal.Terminal/TerminalSessionFactory.cs, BetterTerminal.Terminal/BetterTerminal.Terminal.csproj, BetterTerminal.Shell/ViewModels/SplitViewModel.cs, BetterTerminal.Shell/Views/TerminalSurface.cs, BetterTerminal.Shell/Themes/Controls.xaml, BetterTerminal.Shell/Views/MainWindow.xaml, BetterTerminal.Shell/Views/SplashWindow.xaml, BetterTerminal.Shell/Views/SettingsWindow.xaml, BetterTerminal.Shell/Services/TerminalWorkspace.cs, BetterTerminal.Shell/ViewModels/SampleData.cs, tools/capture-window.ps1, tools/ui-smoke.ps1, tools/flood-benchmark.ps1, tools/session-cycle.ps1]
@@ -13,6 +13,19 @@ surface or this machine. Rules live in [RULES.md](RULES.md#hard-rules); this fil
 of them exist.
 
 ## Gotchas
+
+**A bare character makes the console host guess the key - against the wrong keyboard layout.**
+Symptom: in a `choice.exe` menu (the `ai.bat` launcher, for one) `1` to `9` do nothing while `q`
+works, and an English layout changes nothing. Cause: the host maps the character back to a key with
+`VkKeyScan` against the **system default** layout, not this window's, and wraps anything needing
+Shift there - every digit on a Czech layout, every capital letter anywhere - in standalone
+`VK_SHIFT` records; a program reading keys rather than a line stops at the Shift record and never
+sees the character. Fix: honour win32 input mode, asked for with `CSI ? 9001 h` in the first bytes
+of every session. `VtParser` stores it as `CellGrid.Win32InputMode` and
+`TerminalRenderer.OnTextInput` sends `CSI vk ; scan ; char ; down ; controls ; repeat _`. Do not send
+virtual key zero to skip the lookup: it satisfies `choice.exe` but blinds anything switching on
+`ConsoleKey`, `beterm-wrap.exe` included. Diagnose with a program that dumps `ReadConsoleInput`
+records inside a session. [MEMORY](MEMORY.md#decision-log)
 
 **The app silently runs the wrong backend when you trust `Environment.OSVersion`.**
 Symptom: a modern Windows 11 machine gets the reparented console window instead of the pseudo

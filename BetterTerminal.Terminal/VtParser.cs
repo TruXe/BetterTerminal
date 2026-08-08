@@ -452,6 +452,10 @@ namespace BetterTerminal.Terminal
                     case 2004:
                         _grid.BracketedPaste = enabled;
                         break;
+
+                    case 9001:
+                        _grid.Win32InputMode = enabled;
+                        break;
                 }
             }
         }

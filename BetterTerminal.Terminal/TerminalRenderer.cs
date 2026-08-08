@@ -49,6 +49,10 @@ namespace BetterTerminal.Terminal
         private int _activeLine;
         private int _activeColumn;
 
+        // The key that produced the text currently being delivered. Text input does not carry it,
+        // and a console host asking for whole key events needs it.
+        private Key _textKey = Key.None;
+
         public TerminalRenderer()
         {
             _visuals = new VisualCollection(this);
@@ -254,6 +258,11 @@ namespace BetterTerminal.Terminal
         {
             base.OnPreviewKeyDown(e);
 
+            // A composed or input-method character has no key of its own to report.
+            _textKey = e.Key == Key.ImeProcessed || e.Key == Key.DeadCharProcessed || e.Key == Key.System
+                ? Key.None
+                : e.Key;
+
             if (_session == null || _grid == null)
             {
                 return;
@@ -309,8 +318,22 @@ namespace BetterTerminal.Terminal
                 return;
             }
 
+            Key textKey = _textKey;
+            _textKey = Key.None;
+
+            bool wholeKeyEvents = false;
+            if (_grid != null)
+            {
+                lock (_grid.SyncRoot)
+                {
+                    wholeKeyEvents = _grid.Win32InputMode;
+                }
+            }
+
             ScrollToBottom();
-            _session.Write(e.Text);
+            _session.Write(wholeKeyEvents
+                ? VtKeyEncoder.EncodeText(e.Text, textKey, Keyboard.Modifiers)
+                : e.Text);
             e.Handled = true;
         }
 
