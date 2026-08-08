@@ -23,6 +23,14 @@ namespace BetterTerminal.Shell
         [DataMember(Name = "showSetupOnOpen")]
         public bool ShowSetupOnOpen { get; set; }
 
+        /// <summary>Serve this project's terminal to a browser on this machine.</summary>
+        [DataMember(Name = "localServer")]
+        public bool LocalServer { get; set; }
+
+        /// <summary>The port the local server listens on; 0 means the default.</summary>
+        [DataMember(Name = "localServerPort")]
+        public int LocalServerPort { get; set; }
+
         [DataMember(Name = "commands")]
         public List<PersistedCommand> Commands { get; set; }
 

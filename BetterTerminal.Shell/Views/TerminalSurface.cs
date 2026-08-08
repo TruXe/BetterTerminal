@@ -85,6 +85,16 @@ namespace BetterTerminal.Shell.Views
             get { return _consoleHost == null; }
         }
 
+        /// <summary>
+        /// The drawn session behind this surface, or null on the hosted-console fallback backend.
+        /// The local web server reads its grid and writes to it; only a pseudo console exposes a
+        /// grid and an input pipe, which is why the fallback cannot be served to a browser.
+        /// </summary>
+        internal ConPtySession PseudoConsole
+        {
+            get { return _session as ConPtySession; }
+        }
+
         public void FocusTerminal()
         {
             if (_renderer != null)

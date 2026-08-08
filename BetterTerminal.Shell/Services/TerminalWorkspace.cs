@@ -40,6 +40,7 @@ namespace BetterTerminal.Shell.Services
         private DockController _docking;
         private FrameworkElement _paneHost;
         private DockOverlay _overlay;
+        private WebServer _webServer;
 
         public TerminalWorkspace(MainViewModel model, Window owner, CommandPalette palette)
         {
@@ -162,6 +163,8 @@ namespace BetterTerminal.Shell.Services
 
         public void CloseAllSessions()
         {
+            StopLocalServer();
+
             foreach (TabViewModel tab in _model.Tabs)
             {
                 foreach (PaneViewModel pane in Panes(tab.RootPane))
@@ -262,6 +265,8 @@ namespace BetterTerminal.Shell.Services
             {
                 _owner.Dispatcher.BeginInvoke(new Action(OpenWorkspaceSetup), DispatcherPriority.Background);
             }
+
+            ApplyLocalServer();
         }
 
         private static PersistedProject DefaultProject(string directory)
@@ -337,6 +342,10 @@ namespace BetterTerminal.Shell.Services
             model.Name = ProjectDisplayName();
             model.StartupCommand = _project.StartupCommand;
             model.ShowSetupOnOpen = _project.ShowSetupOnOpen;
+            model.LocalServer = _project.LocalServer;
+            model.LocalServerPort = (_project.LocalServerPort > 0
+                ? _project.LocalServerPort
+                : WorkspaceSetupViewModel.DefaultPort).ToString();
 
             foreach (ProfileViewModel profile in _model.Profiles)
             {
@@ -374,6 +383,8 @@ namespace BetterTerminal.Shell.Services
             _project.Shell = model.SelectedShell;
             _project.StartupCommand = model.StartupCommand;
             _project.ShowSetupOnOpen = model.ShowSetupOnOpen;
+            _project.LocalServer = model.LocalServer;
+            _project.LocalServerPort = model.ResolvedPort;
 
             _project.Commands = new List<PersistedCommand>();
             foreach (CommandEntryViewModel entry in model.Commands)
@@ -395,6 +406,59 @@ namespace BetterTerminal.Shell.Services
 
             ProjectStore.Save(_projectDirectory, _project);
             UpdateProjectName();
+            ApplyLocalServer();
+        }
+
+        /// <summary>
+        /// Starts or stops the local web server to match the project setting. The server serves
+        /// whichever pane is focused, so the browser follows the desktop; it is handed a delegate
+        /// rather than a session so it always reads the current one.
+        /// </summary>
+        private void ApplyLocalServer()
+        {
+            bool wanted = _project != null && _project.LocalServer;
+            int port = _project != null && _project.LocalServerPort > 0
+                ? _project.LocalServerPort
+                : WorkspaceSetupViewModel.DefaultPort;
+
+            if (!wanted)
+            {
+                StopLocalServer();
+                return;
+            }
+
+            if (_webServer != null && _webServer.Port == port)
+            {
+                return;
+            }
+
+            StopLocalServer();
+
+            _webServer = new WebServer(port, delegate
+            {
+                PaneViewModel active = _model.ActivePane;
+                return active != null && active.Surface != null ? active.Surface.PseudoConsole : null;
+            });
+
+            string error;
+            if (_webServer.TryStart(out error))
+            {
+                _model.StatusMessage = "Local server on " + _webServer.Url + " - open it in a browser.";
+            }
+            else
+            {
+                _model.StatusMessage = "The local server could not start on port " + port + ": " + error;
+                _webServer = null;
+            }
+        }
+
+        private void StopLocalServer()
+        {
+            if (_webServer != null)
+            {
+                _webServer.Stop();
+                _webServer = null;
+            }
         }
 
         // ===== saved connections =====

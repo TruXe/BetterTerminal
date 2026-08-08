@@ -105,6 +105,81 @@ open threads below.
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
 
+### 2026-08-09 - The notification is its own library (`BetterTerminal.Notifications.dll`)
+
+**Context.** The `ToastEnabled=0` finding killed the WinRT route for good: the user's account has the
+master Windows-notifications toggle off (`HKCU\...\PushNotifications\ToastEnabled = 0`), so every
+system toast is dropped no matter the code - confirmed in the registry, `ToastNotifier.Setting` stayed
+`DisabledForUser` even with a Start-menu shortcut and `SetCurrentProcessExplicitAppUserModelID`. The
+user asked for a **custom window** that looks like a Windows 11 toast, then for it as a **library**.
+
+**Decision - a WPF class library the host loads with a command line.** New project
+`BetterTerminal.Notifications` (Library/.dll, .NET 4.8, C# 7.3, WPF; GUID ...C4000A) holds
+`ToastNotification` (the window), `ToastAction`, `NotificationRequest` (the CLI parser),
+`NotificationActions` (named actions -> delegates), and `NotificationHost.Run(args)`. Because the DLL
+cannot be a process, the **host that loads it in the user session is `BetterTerminal.exe`**: the
+service starts it with `--notify --title "..." --message "..." -btn1 install -btn2 later`
+(`UpdateShared.UpdateNotifyArguments`), the shell's `App.OnStartup` sees `--notify` and calls
+`NotificationHost.Run(e.Args)` and nothing else. `NotificationHost` self-hosts a WPF `Application`
+when there is none (the launched case) or shows in-process when one exists (a live shell). Buttons:
+`-btn1..3 <action>`, up to three, none required; `install`/`open` start the app (applies the staged
+build), `later`/`dismiss` just close; `LABEL=action` gives a custom caption. The window ships in the
+payload via a `ProjectReference` from the shell (like Banner), so it unpacks into `app\` beside the
+exe. It is drawn by the app, so **`ToastEnabled=0` no longer matters** - it always shows.
+
+**The window is the imported design.** From the user's Claude Design project (`DesignSync`,
+`wpf/ToastNotification.xaml`): a pixel-measured Win11 toast, 364x157 DIP, DWM acrylic backdrop
+(`DWMWA_SYSTEM_BACKDROP_TYPE` transient window) with a solid `#C71E2028` fallback, rounded corners,
+right-side slide-in, hover-pauses-dismiss, stacked bottom-right. Adapted from .NET 6 (file-scoped ns,
+nullable, `init`, property patterns) to .NET 4.8 / C# 7.3; the PowerShell tile became a `>_` tile.
+
+**Removed as now-dead:** `SystemToastWindow` (the interim solid-card window from 1.4.4),
+`ToastShortcut`, and the WinRT PowerShell path (`UpdateShared.ToastAppId`, `PowerShellExecutable`,
+`ToastArguments`, `Escape`). The **Test notification button** was used to verify, then removed as the
+user asked. `SessionNotice` (WTSSendMessage) still stands as the last-ditch fallback.
+
+**Verified.** Debug rebuild is warning-clean (0/0); `BUILD` staged at 1.4.4 (30 files, DLL present in
+`app\`). The window was shown via `BetterTerminal.exe --notify ...` and captured: acrylic toast,
+Install now / Later. Not verified here: the service raising it as LocalSystem through
+CreateProcessAsUser, which needs the installed service.
+
+### 2026-08-08 - The service's update notice is a real Windows toast, raised through PowerShell
+
+> Superseded 2026-08-09: the WinRT/PowerShell toast below was removed. The account's master
+> notifications toggle was off (`ToastEnabled=0`), so no system toast could ever show; the notice is
+> now the app-drawn `BetterTerminal.Notifications` window. Kept for the reasoning trail.
+
+**Context.** The user wanted a proper toast rather than the message box the service showed when
+BetterTerminal was closed, and pointed at the `WindowsToastNotifyApi` package.
+
+**Why not that package.** It targets `net8.0` only and depends on `CommunityToolkit.WinUI.Notifications`;
+this product is .NET Framework 4.8, and a net8 assembly cannot be referenced from it. Confirmed from
+its csproj, not guessed.
+
+**Decision - reach WinRT through Windows PowerShell.** A WinRT toast from an unpackaged .NET Framework
+app needs `Windows.winmd` references and a registered AppUserModelID - fragile at build (SDK-version
+pinned winmd) and a risk to the CI release pipeline. Windows PowerShell reaches the same
+`Windows.UI.Notifications` API with no build-time metadata, so `UpdateShared.ToastArguments` builds a
+`-EncodedCommand` script (shared, linked into both assemblies) that registers a `BetterTerminal`
+AppUserModelID in HKCU and shows the toast. The **service** runs it in the user session with
+`SessionLauncher.Run` (CreateProcessAsUser, session 0 cannot toast); the **application**, already in
+the session, runs it directly. `SessionNotice` (WTSSendMessage) stays as the fallback if the toast
+cannot be raised, and the old notification code is copied under `backup/notifications-2026-08-08/`.
+
+**Decision - notify, do not force.** When BetterTerminal is closed the service now only *tells* the
+user a build is ready (toast, once per version) and leaves the staged update for `TryApplyOnStartup`
+to apply when they next open it - the earlier behaviour force-opened the updated app, which was
+intrusive. Flip back by restoring the apply call in `NotifyIfNothingIsRunning` if wanted.
+
+**Provisional.** A "Test notification" button in Settings raises the toast on demand, so it can be
+seen without waiting for a release.
+
+**Verified.** Both configurations build zero-warning under `/warnaserror`; `BUILD` staged at 1.4.4.
+The exact script the code generates was run through `-EncodedCommand` and raised the toast with exit
+0 (a game in the foreground routed it to the Action Center - Focus Assist, a Windows toast fact, not
+a fault). Not verified here: the service raising it as LocalSystem through CreateProcessAsUser, which
+needs the installed service.
+
 ### 2026-08-08 - The service updates and notifies on its own when the application is closed (1.4.2)
 
 **Context.** The user wanted the update to happen through the service even when BetterTerminal is not

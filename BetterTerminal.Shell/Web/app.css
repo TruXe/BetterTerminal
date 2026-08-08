@@ -1,0 +1,88 @@
+:root {
+  --chrome: #1b1b1d;
+  --bg: #0c0c0c;
+  --stroke: #2b2b2e;
+  --text: #cccccc;
+  --muted: #8a8a8f;
+  --accent: #e8c06a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+#bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--stroke);
+}
+
+#brand {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+#brand::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+  vertical-align: middle;
+}
+
+#status {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+#stage {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+#screen {
+  image-rendering: -webkit-optimize-contrast;
+  touch-action: manipulation;
+}
+
+/* A transparent field laid over the terminal. Tapping it is what raises the on-screen keyboard on a
+   phone and gives keystrokes somewhere to land; the canvas shows through it. */
+#kbd {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  resize: none;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  outline: none;
+  font-size: 16px;
+}

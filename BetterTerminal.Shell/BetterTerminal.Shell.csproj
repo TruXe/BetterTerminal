@@ -208,6 +208,11 @@
     <Compile Include="Views\TerminalSurface.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Converters\IsNarrowConverter.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Web\index.html" />
+    <EmbeddedResource Include="Web\app.css" />
+    <EmbeddedResource Include="Web\app.js" />
     <Compile Include="Services\AppTheme.cs" />
     <Compile Include="Services\DockController.cs" />
     <Compile Include="Services\DockSide.cs" />
@@ -223,6 +228,9 @@
     <Compile Include="Services\UpdateApply.cs" />
     <Compile Include="Services\UpdateClient.cs" />
     <Compile Include="Services\UpdateProbe.cs" />
+    <Compile Include="Services\WebAssets.cs" />
+    <Compile Include="Services\WebServer.cs" />
+    <Compile Include="Services\TerminalWebClient.cs" />
     <Compile Include="Services\ServiceInstall.cs" />
     <Compile Include="Services\ShellPresentation.cs" />
     <Compile Include="Services\StartupOptions.cs" />
@@ -308,6 +316,13 @@
     <ProjectReference Include="..\BetterTerminal.AIWizard.Cli\BetterTerminal.AIWizard.Cli.csproj">
       <Project>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40007}</Project>
       <Name>BetterTerminal.AIWizard.Cli</Name>
+    </ProjectReference>
+    <!-- The notification library. Referenced both because this shell hosts it (a live update notice,
+         the Settings test) and so its dll travels in the one-file download for the service to load
+         through this application when nothing is running. -->
+    <ProjectReference Include="..\BetterTerminal.Notifications\BetterTerminal.Notifications.csproj">
+      <Project>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000A}</Project>
+      <Name>BetterTerminal.Notifications</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

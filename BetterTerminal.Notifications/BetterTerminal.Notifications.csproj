@@ -1,13 +1,14 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
-    <ProjectGuid>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40008}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>BetterTerminal.Service</RootNamespace>
-    <AssemblyName>beterm-service</AssemblyName>
+    <ProjectGuid>{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000A}</ProjectGuid>
+    <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BetterTerminal.Notifications</RootNamespace>
+    <AssemblyName>BetterTerminal.Notifications</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <LangVersion>7.3</LangVersion>
     <FileAlignment>512</FileAlignment>
@@ -31,37 +32,30 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <!-- A Windows service and its self-install need these framework assemblies. They are part of
-         .NET Framework 4.8 and add no package. -->
-    <Reference Include="System.ServiceProcess" />
-    <Reference Include="System.Configuration.Install" />
+    <Reference Include="System.Xaml" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\VersionInfo.cs">
       <Link>Properties\VersionInfo.cs</Link>
     </Compile>
-    <Compile Include="..\UpdateShared.cs">
-      <Link>Updating\UpdateShared.cs</Link>
+    <Page Include="ToastNotification.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Compile Include="ToastNotification.xaml.cs">
+      <DependentUpon>ToastNotification.xaml</DependentUpon>
+      <SubType>Code</SubType>
     </Compile>
-    <Compile Include="..\ReleaseFeed.cs">
-      <Link>Updating\ReleaseFeed.cs</Link>
-    </Compile>
-    <Compile Include="..\UpdateDownloader.cs">
-      <Link>Updating\UpdateDownloader.cs</Link>
-    </Compile>
-    <Compile Include="HelperInventory.cs" />
-    <Compile Include="HostService.cs" />
-    <Compile Include="ProjectInstaller.cs" />
-    <Compile Include="Program.cs" />
-    <Compile Include="ServiceControl.cs" />
-    <Compile Include="ServiceLog.cs" />
-    <Compile Include="SessionLauncher.cs" />
-    <Compile Include="SessionNotice.cs" />
-    <Compile Include="ToastNotice.cs" />
-    <Compile Include="UpdateCheck.cs" />
-    <Compile Include="UpdateSignal.cs" />
+    <Compile Include="ToastAction.cs" />
+    <Compile Include="NotificationRequest.cs" />
+    <Compile Include="NotificationActions.cs" />
+    <Compile Include="NotificationHost.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

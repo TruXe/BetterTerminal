@@ -75,6 +75,8 @@ namespace BetterTerminal.Shell.ViewModels
         private string _selectedShell;
         private string _startupCommand;
         private bool _showSetupOnOpen;
+        private bool _localServer;
+        private string _localServerPort = DefaultPort.ToString();
         private string _newCommandName;
         private string _newCommandText;
         private string _newValueKey;
@@ -119,6 +121,39 @@ namespace BetterTerminal.Shell.ViewModels
         {
             get { return _showSetupOnOpen; }
             set { Set(ref _showSetupOnOpen, value); }
+        }
+
+        /// <summary>The port used when the field is blank or not a number.</summary>
+        public const int DefaultPort = 1100;
+
+        /// <summary>
+        /// Serve this project's terminal to a browser on this machine. It listens on localhost only,
+        /// so a phone or tablet reaches it through a tunnel the user sets up - a terminal is shell
+        /// access, and it is not put on the open network on a checkbox.
+        /// </summary>
+        public bool LocalServer
+        {
+            get { return _localServer; }
+            set { Set(ref _localServer, value); }
+        }
+
+        public string LocalServerPort
+        {
+            get { return _localServerPort; }
+            set { Set(ref _localServerPort, value); }
+        }
+
+        /// <summary>The chosen port, or the default when the field is blank or out of range.</summary>
+        public int ResolvedPort
+        {
+            get
+            {
+                int port;
+                return int.TryParse((_localServerPort ?? string.Empty).Trim(), out port)
+                    && port >= 1 && port <= 65535
+                    ? port
+                    : DefaultPort;
+            }
         }
 
         public ObservableCollection<CommandEntryViewModel> Commands { get; private set; }

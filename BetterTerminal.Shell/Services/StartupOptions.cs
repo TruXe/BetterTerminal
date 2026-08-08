@@ -12,6 +12,13 @@ namespace BetterTerminal.Shell.Services
     {
         public const string ProjectSwitch = "--project";
 
+        /// <summary>
+        /// Set by the service when it starts the application only to raise a notification: the
+        /// application loads the notification library with the rest of the command line and shows
+        /// nothing else. The notification's own text and buttons follow on the same line.
+        /// </summary>
+        public const string NotifySwitch = "--notify";
+
         private static readonly StartupOptions Instance = new StartupOptions();
 
         private StartupOptions()
@@ -30,6 +37,9 @@ namespace BetterTerminal.Shell.Services
         {
             get { return !string.IsNullOrEmpty(ProjectDirectory); }
         }
+
+        /// <summary>True when the service started this application only to raise a notification.</summary>
+        public bool HasNotify { get; private set; }
 
         /// <summary>
         /// Accepts "--project &lt;path&gt;" and a bare path, so the shim, a shortcut and a
@@ -58,6 +68,14 @@ namespace BetterTerminal.Shell.Services
                         i++;
                     }
 
+                    continue;
+                }
+
+                if (string.Equals(argument, NotifySwitch, StringComparison.OrdinalIgnoreCase))
+                {
+                    // A bare flag: the notification's title, message and buttons are read from the
+                    // rest of the line by the notification library, not here.
+                    HasNotify = true;
                     continue;
                 }
 

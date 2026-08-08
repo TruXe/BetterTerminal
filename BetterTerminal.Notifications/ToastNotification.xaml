@@ -1,0 +1,267 @@
+<Window x:Class="BetterTerminal.Notifications.ToastNotification"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
+        Title="Notification"
+        WindowStyle="None"
+        AllowsTransparency="False"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowActivated="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Focusable="False"
+        SizeToContent="Height"
+        Width="364"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="ClearType"
+        FontFamily="Segoe UI Variable Text, Segoe UI">
+
+    <!--  Geometry measured from the reference screenshot: 731x314 px @200% = 364x157 DIP.
+          AllowsTransparency stays False on purpose: the DWM system backdrop (acrylic) and
+          the rounded-corner preference only compose on a window that still has a DWM frame.
+          Code-behind turns both on; on pre-22H2 builds it falls back to ToastFallbackBrush.  -->
+
+    <WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="0"
+                            CornerRadius="0"
+                            GlassFrameThickness="-1"
+                            NonClientFrameEdges="None"
+                            ResizeBorderThickness="0"
+                            UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+
+        <!--  Acrylic tint sampled from the reference: #1E2028 at 78 %  -->
+        <SolidColorBrush x:Key="ToastFallbackBrush" Color="#C71E2028" />
+        <SolidColorBrush x:Key="ToastStrokeBrush" Color="#17FFFFFF" />
+
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FFFFFFFF" />
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#C9FFFFFF" />
+
+        <!--  Fills are white-alpha so the acrylic reads through them  -->
+        <SolidColorBrush x:Key="ControlFillBrush" Color="#0FFFFFFF" />
+        <SolidColorBrush x:Key="ControlFillHoverBrush" Color="#1AFFFFFF" />
+        <SolidColorBrush x:Key="ControlFillPressedBrush" Color="#0AFFFFFF" />
+        <SolidColorBrush x:Key="SubtleFillHoverBrush" Color="#0FFFFFFF" />
+        <SolidColorBrush x:Key="SubtleFillPressedBrush" Color="#0AFFFFFF" />
+
+        <LinearGradientBrush x:Key="ControlStrokeBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Offset="0.0" Color="#1CFFFFFF" />
+            <GradientStop Offset="1.0" Color="#12FFFFFF" />
+        </LinearGradientBrush>
+        <LinearGradientBrush x:Key="ControlStrokeHoverBrush" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Offset="0.0" Color="#21FFFFFF" />
+            <GradientStop Offset="1.0" Color="#17FFFFFF" />
+        </LinearGradientBrush>
+
+        <!--  Url / File / Folder action button: 32 high, radius 4, 8 px gutter  -->
+        <Style x:Key="ToastActionButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Margin" Value="4,0" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="Normal" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="Background" Value="{StaticResource ControlFillBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource ControlStrokeBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter x:Name="Content"
+                                              Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="False" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlFillHoverBrush}" />
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource ControlStrokeHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource ControlFillPressedBrush}" />
+                                <Setter TargetName="Content" Property="Opacity" Value="0.72" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource TextPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Content" Property="Opacity" Value="0.36" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!--  "..." and close glyph buttons: 30 x 24, transparent until hover  -->
+        <Style x:Key="ToastGlyphButtonStyle" TargetType="{x:Type Button}">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="4"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource SubtleFillHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{StaticResource SubtleFillPressedBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Border x:Name="Root"
+            Background="{StaticResource ToastFallbackBrush}"
+            BorderBrush="{StaticResource ToastStrokeBrush}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="15,14,15,15">
+
+        <Border.RenderTransform>
+            <TranslateTransform x:Name="SlideTransform" X="0" Y="0" />
+        </Border.RenderTransform>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="16" />
+                <!--  header  -->
+                <RowDefinition Height="Auto" />
+                <!--  title  -->
+                <RowDefinition Height="Auto" />
+                <!--  body  -->
+                <RowDefinition Height="Auto" />
+                <!--  actions  -->
+            </Grid.RowDefinitions>
+
+            <!--  Header: 16 px app icon, 8 px gutter, app name, then the two glyph buttons  -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!--  App tile: a 16 px rounded square with a terminal prompt, so the header
+                      carries the product mark with no packaged image asset.  -->
+                <Border Grid.Column="0"
+                        Width="16"
+                        Height="16"
+                        CornerRadius="4"
+                        VerticalAlignment="Center">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                            <GradientStop Offset="0" Color="#FF3A6EA5" />
+                            <GradientStop Offset="1" Color="#FF294F79" />
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <TextBlock Text="&gt;_"
+                               Foreground="White"
+                               FontFamily="Consolas"
+                               FontSize="8"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+                </Border>
+
+                <TextBlock x:Name="AppNameText"
+                           Grid.Column="1"
+                           Margin="8,0,8,0"
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           LineHeight="16"
+                           LineStackingStrategy="BlockLineHeight"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Text="BetterTerminal"
+                           TextTrimming="CharacterEllipsis" />
+
+                <StackPanel Grid.Column="2"
+                            Margin="0,0,-4,0"
+                            VerticalAlignment="Center"
+                            Orientation="Horizontal">
+                    <Button x:Name="MoreButton"
+                            Margin="0,0,10,0"
+                            Content="&#xE712;"
+                            FontSize="16"
+                            Style="{StaticResource ToastGlyphButtonStyle}"
+                            ToolTip="More options" />
+                    <Button x:Name="CloseButton"
+                            Content="&#xE8BB;"
+                            FontSize="12"
+                            Style="{StaticResource ToastGlyphButtonStyle}"
+                            ToolTip="Dismiss" />
+                </StackPanel>
+            </Grid>
+
+            <!--  Title: 19 px below the header row, 14 px SemiBold, 20 px line box  -->
+            <TextBlock x:Name="TitleText"
+                       Grid.Row="1"
+                       Margin="0,19,0,0"
+                       FontSize="14"
+                       FontWeight="SemiBold"
+                       LineHeight="20"
+                       LineStackingStrategy="BlockLineHeight"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       Text="Update ready"
+                       TextWrapping="Wrap" />
+
+            <!--  Body: same 20 px line box, white at 78.6 %  -->
+            <TextBlock x:Name="MessageText"
+                       Grid.Row="2"
+                       FontSize="14"
+                       LineHeight="20"
+                       LineStackingStrategy="BlockLineHeight"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       Text="There are three buttons here"
+                       TextWrapping="Wrap" />
+
+            <!--  Actions: equal columns, 8 px gutter (4 px margin each side, negative host margin)  -->
+            <ItemsControl x:Name="ActionsHost"
+                          Grid.Row="3"
+                          Margin="-4,19,-4,0"
+                          Focusable="False">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <primitives:UniformGrid Rows="1" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Button Click="OnActionClick"
+                                Content="{Binding Label}"
+                                Style="{StaticResource ToastActionButtonStyle}"
+                                Tag="{Binding}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Grid>
+    </Border>
+</Window>

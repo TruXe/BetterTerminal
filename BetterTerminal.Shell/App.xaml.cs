@@ -1,4 +1,5 @@
 using System.Windows;
+using BetterTerminal.Notifications;
 using BetterTerminal.Shell.Services;
 using BetterTerminal.Shell.Views;
 
@@ -13,6 +14,16 @@ namespace BetterTerminal.Shell
             // The command shim passes the directory it was invoked from; parse it before any
             // window exists, because the first window decides what to open.
             StartupOptions.Current.Parse(e.Args);
+
+            // Started by the service only to raise a notification: this application is the host that
+            // loads the notification library and hands it the rest of the command line. A service in
+            // session 0 cannot draw a window itself, and the library's window shows even when Windows
+            // notifications are turned off. Nothing else opens; the application ends with the toast.
+            if (StartupOptions.Current.HasNotify)
+            {
+                NotificationHost.Run(e.Args);
+                return;
+            }
 
             // Before anything is shown: if the service staged a newer build while this was closed,
             // hand off to it now, with no window and no session in the way of the file replacement.

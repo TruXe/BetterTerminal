@@ -296,6 +296,38 @@ namespace BetterTerminal.Updating
             return Normalize(version).ToString(4);
         }
 
+        /// <summary>
+        /// The switch the service starts the application with to raise a notification and nothing
+        /// else. The application hosts the notification library, which draws its own window - one that
+        /// shows whether or not the account has Windows notifications turned on, unlike a system toast.
+        /// </summary>
+        public const string NotifySwitch = "--notify";
+
+        /// <summary>
+        /// The command line that raises the "update ready" notice through the host application: the
+        /// notify switch, the title and message, and an Install / Later button pair. The message has
+        /// no embedded quotes, so wrapping the two text values in quotes is enough for the host to
+        /// receive each as a single argument.
+        /// </summary>
+        public static string UpdateNotifyArguments(Version version)
+        {
+            string message = "Version " + NormalizedString(version) + " is ready to install.";
+            return NotifySwitch +
+                " --title \"Update ready\"" +
+                " --message \"" + message + "\"" +
+                " -btn1 install -btn2 later";
+        }
+
+        /// <summary>
+        /// The installed executable the application recorded for itself, read from the machine-wide
+        /// record both processes share. This is how the service, which cannot expand the user's
+        /// profile path, finds the application to start in the user's session.
+        /// </summary>
+        public static string ReadInstalledExecutable()
+        {
+            return ReadField(InstalledRecordPath, "exe");
+        }
+
         public static string StagedFileName(Version version)
         {
             return "BetterTerminal-" + Normalize(version).ToString(4) + ".exe";

@@ -83,6 +83,31 @@
                                Text="Show this setup every time the project opens"/>
                 </Grid>
 
+                <Grid Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <ToggleButton Grid.Column="0" Style="{StaticResource Bt.ToggleSwitch}"
+                                  IsChecked="{Binding LocalServer, Mode=TwoWay}"
+                                  VerticalAlignment="Center"
+                                  AutomationProperties.Name="Serve this terminal to a browser on this machine"/>
+                    <StackPanel Grid.Column="1" Margin="12,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Style="{StaticResource Bt.Text.Body}"
+                                   Text="Local Server - open this terminal in a web browser"/>
+                        <TextBlock Style="{StaticResource Bt.Text.Caption}"
+                                   Foreground="{DynamicResource Bt.TextFillSecondaryBrush}"
+                                   Text="Listens on localhost only. Reach it from a phone through your own tunnel."/>
+                    </StackPanel>
+                    <TextBox Grid.Column="2" Width="72" VerticalAlignment="Center"
+                             Style="{StaticResource Bt.TextBox}"
+                             IsEnabled="{Binding LocalServer}"
+                             Text="{Binding LocalServerPort, UpdateSourceTrigger=PropertyChanged}"
+                             ToolTip="Port (default 1100)"
+                             AutomationProperties.Name="Local server port"/>
+                </Grid>
+
                 <Rectangle Height="1" Margin="0,20,0,20" Fill="{DynamicResource Bt.StrokeSubtleBrush}"/>
 
                 <!-- ===== commands the user defines ===== -->

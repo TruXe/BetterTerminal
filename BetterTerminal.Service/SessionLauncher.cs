@@ -25,6 +25,11 @@ namespace BetterTerminal.Service
 
         public static bool Run(string executable)
         {
+            return Run(executable, null);
+        }
+
+        public static bool Run(string executable, string arguments)
+        {
             uint session = WTSGetActiveConsoleSessionId();
             if (session == NoActiveSession)
             {
@@ -58,7 +63,13 @@ namespace BetterTerminal.Service
                 startup.lpDesktop = "winsta0\\default";
 
                 ProcessInformation process;
-                StringBuilder commandLine = new StringBuilder("\"" + executable + "\"");
+                string line = "\"" + executable + "\"";
+                if (!string.IsNullOrEmpty(arguments))
+                {
+                    line += " " + arguments;
+                }
+
+                StringBuilder commandLine = new StringBuilder(line);
 
                 bool started = CreateProcessAsUser(
                     primaryToken,

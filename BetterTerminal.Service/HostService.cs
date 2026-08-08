@@ -25,6 +25,7 @@ namespace BetterTerminal.Service
 
         private UpdateSignal _signal;
         private Timer _poll;
+        private Version _notifiedVersion;
 
         public HostService()
         {
@@ -87,7 +88,7 @@ namespace BetterTerminal.Service
                 {
                     _signal.SetAvailable(found);
                     Log("Staged update " + UpdateShared.NormalizedString(found) + ".");
-                    ApplyIfNothingIsRunning(found);
+                    NotifyIfNothingIsRunning(found);
                 }
             }
             catch (Exception error)
@@ -98,34 +99,33 @@ namespace BetterTerminal.Service
         }
 
         /// <summary>
-        /// When the application is running the notice and the apply are its own, over the pipe, so a
-        /// live session is never disturbed. When nothing of ours is on the desktop the service is the
-        /// only one that can act: it shows a message in the user's session and installs the update
-        /// there itself. The application opening is the visible result of the update.
+        /// When the application is running the notice is its own, over the pipe, so a live session is
+        /// never disturbed. When nothing of ours is on the desktop the service is the only one that
+        /// can speak: it shows a toast in the user's session - and a plain message box if the toast
+        /// could not be raised - telling them a newer build is ready. It does not force the update on
+        /// them; the staged build is applied the next time they open the application themselves. Told
+        /// once per version, so an unattended machine is not nagged every poll.
         /// </summary>
-        private void ApplyIfNothingIsRunning(Version version)
+        private void NotifyIfNothingIsRunning(Version version)
         {
             if (ApplicationIsRunning())
             {
                 return;
             }
 
-            string launcher = UpdateShared.ReadStagedLauncher(version);
-            if (launcher == null)
+            if (_notifiedVersion != null && _notifiedVersion == version)
             {
                 return;
             }
 
-            SessionNotice.Show("BetterTerminal update",
-                "Installing version " + UpdateShared.NormalizedString(version) + ".");
-
-            if (SessionLauncher.Run(launcher))
+            if (!ToastNotice.Show(version))
             {
-                // Applied: clear the record so the next poll does not run it again before the updated
-                // application has written its own installed version.
-                UpdateShared.ClearStaged();
-                Log("Installed update " + UpdateShared.NormalizedString(version) + " in the user session.");
+                SessionNotice.Show("BetterTerminal update",
+                    "Version " + UpdateShared.NormalizedString(version) + " is ready. Open BetterTerminal to install it.");
             }
+
+            _notifiedVersion = version;
+            Log("Notified the user of update " + UpdateShared.NormalizedString(version) + ".");
         }
 
         private static bool ApplicationIsRunning()
