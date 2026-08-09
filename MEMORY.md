@@ -13,6 +13,11 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-09 (1.4.9).** The application can put itself in the menu a folder shows on a right
+click - named, with its icon, opening that folder as a project - and a new **Integration** page in
+the settings window turns it on and off. It is off until asked for, per user, and the registry is the
+only record of it. The newest [decision-log](#decision-log) entry has the detail and the proof.
+
 **Update 2026-08-08 (1.4.3).** The application checks the release feed itself, at start and then
 hourly, and shows its own corner notice - so a new version is announced at once instead of only when
 the service polls. 1.4.1 was silent because the application only listened on the service's pipe and
@@ -104,6 +109,67 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-09 - Verification never touches the user's desktop (R14)
+
+Said outright after the 1.4.9 work: driving his mouse and his screen is not allowed. What earned it
+was a capture script that called `SetForegroundWindow` and then `SendKeys` with Ctrl+comma - foreground
+focus taken from whatever he was doing, and a key gesture sent into it - followed by clicking the
+settings window's controls through UI-Automation `Invoke`/`Select`/`Toggle` while windows opened on
+his desktop mid-session. Now **R14**.
+
+The principle was already in this repository and was simply not read: `tools\capture-window.ps1`
+uses `PrintWindow` "so taking a screenshot never has to steal foreground focus from whatever the
+user is doing", and this file already recorded that **the user drives the interactive pass**. Note
+that `tools\ui-smoke.ps1` falls under the ban too - driving buttons by automation name is the same
+act, which leaves the documented UI sequences as something to hand to the user, not to run at him.
+
+**What to do instead**, and it is not weaker evidence: load the built assembly and call the shipped
+class directly - `[Reflection.Assembly]::LoadFrom("BUILD\app\BetterTerminal.exe")`, then the static
+method - and read the real side effect. That is exactly how the 1.4.9 registry behaviour was proven
+(written, survived an update, removed cleanly), and none of it needed a window. Everything only a
+person can judge is handed over as steps to click and what should happen.
+
+### 2026-08-09 - The folder right-click menu is a switch in the settings window (1.4.9)
+
+Asked for: the application in the menu a folder shows on a right click, named and with its icon, the
+way the other tools on that machine put themselves there - and a switch for it in the settings
+window, because a menu entry nobody asked for is a nuisance. `Services\ExplorerMenu.cs` writes it and
+a new **Integration** settings page turns it on and off.
+
+**What is written.** Two per-user class registrations, `Directory\Background\shell\BetterTerminal`
+and `Directory\shell\BetterTerminal` under `HKCU\Software\Classes` - the background of an open folder
+and a folder icon in a list are two different menus and both had to carry it. Default value is the
+menu text (`BetterTerminal`), `Icon` is `"<exe>",0` so the mark comes out of the executable and no
+image file is installed anywhere, and `command` is
+`"<exe>" --project "%V"`. That is the **same switch the `beterm` shim uses**, so the menu and the
+typed command open a folder identically - no second code path to keep in step. Nothing machine wide,
+no elevation, no uninstall entry: it stays inside the rule that only the service registration leaves
+the user profile.
+
+**The registry is the only record, deliberately.** No `[DataMember]` in `workspace.json`. A mirrored
+copy drifts the moment the user deletes the keys by hand, and the switch would then be describing
+something that is not there; `SettingsViewModel` seeds itself from `ExplorerMenu.IsVisible` and the
+setter stores **what the registry holds afterwards**, not what was clicked, so a write that failed
+shows as off. `App.OnStartup` calls `ExplorerMenu.Refresh()` next to `CommandRegistration.Ensure()`:
+it re-points an entry the user already turned on at the current installed copy and **never adds
+one**, which is what keeps the entry working across a self-update. Writes go through `SetIfChanged`
+because this runs on every start and re-writing an identical value is still a change to the desktop.
+
+**Target is the installed copy** (`SelfInstall.InstalledExecutable`), falling back to the running
+executable, for the same reason the `beterm` shim points there: a build folder can move or be
+deleted, the copy under the profile cannot.
+
+**Verified**, by calling the shipped class out of `BUILD\app\BetterTerminal.exe` and reading the
+registry: off by default; on writes both keys with label, icon and command; running that exact
+command line against a folder opened it as a project (banner reported the folder, `.beterm\
+project.json` was created); the entry survived a restart and the 1.4.8 -> 1.4.9 self-update; off
+removed both key trees leaving nothing behind. Left **off** afterwards - the point of the switch is
+that the user chooses.
+
+**Known limit, stated in the settings page.** This is the classic verb, so on Windows 11 it sits
+under **Show more options** with everything else that registers this way. The compact Windows 11
+menu takes packaged commands only, which this application is not.
 
 ### 2026-08-09 - Service-driven update notice confirmed; poll settled at 15 min (1.4.8)
 

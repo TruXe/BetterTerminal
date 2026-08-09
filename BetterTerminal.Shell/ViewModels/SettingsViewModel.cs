@@ -19,6 +19,7 @@ namespace BetterTerminal.Shell.ViewModels
         private bool _isCursorUnderline;
         private bool _blinkCursor = true;
         private bool _splitUsesActiveProfile;
+        private bool _showInFolderMenu;
 
         public SettingsViewModel()
         {
@@ -28,9 +29,14 @@ namespace BetterTerminal.Shell.ViewModels
                 new SettingsPageViewModel { Title = "Profiles", Glyph = "\uE756" },
                 new SettingsPageViewModel { Title = "Keyboard", Glyph = "\uE765" },
                 new SettingsPageViewModel { Title = "Panes and tabs", Glyph = "\uEE3F" },
+                new SettingsPageViewModel { Title = "Integration", Glyph = "\uE8B7" },
                 new SettingsPageViewModel { Title = "About", Glyph = "\uE946" }
             };
             _selectedPage = Pages[0];
+
+            // The right-click entry lives in the registry and nowhere else, so the switch starts
+            // from what is actually registered rather than from a stored preference.
+            _showInFolderMenu = ExplorerMenu.IsVisible;
 
             Schemes = new ObservableCollection<SchemeViewModel>();
             Profiles = new ObservableCollection<ProfileViewModel>();
@@ -118,6 +124,35 @@ namespace BetterTerminal.Shell.ViewModels
                     SplitUsesActiveProfile = false;
                 }
             }
+        }
+
+        /// <summary>
+        /// Whether the application is offered in the folder right-click menu. Applied straight
+        /// away rather than on a Changed event: the terminal surfaces have nothing to do with it,
+        /// and the registry is where the setting lives.
+        /// </summary>
+        public bool ShowInFolderMenu
+        {
+            get { return _showInFolderMenu; }
+
+            set
+            {
+                if (_showInFolderMenu == value)
+                {
+                    return;
+                }
+
+                // Take the value back from the system, not from the switch: an entry that could
+                // not be written must show as absent.
+                _showInFolderMenu = ExplorerMenu.SetVisible(value);
+                Raise("ShowInFolderMenu");
+            }
+        }
+
+        /// <summary>The command line the menu entry runs, shown so it can be checked.</summary>
+        public string FolderMenuCommand
+        {
+            get { return ExplorerMenu.CommandLine(); }
         }
 
         public ObservableCollection<string> MonoFonts { get; private set; }

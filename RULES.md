@@ -101,6 +101,20 @@ structure, commands, dependencies or a decision updates the owning file (routed 
 appends an entry to [MEMORY.md#decision-log](MEMORY.md#decision-log). Enforced by `/md-audit` before a
 release and by `.claude/skills/md-orchestrator/scripts/validate_docs.py --strict`.
 
+**R14 [convention] No assistant takes over the user's mouse, keyboard or foreground window.**
+Why: it is the user's machine and his session. Banned unless he asks for it in the same run:
+`SendKeys`, `SetForegroundWindow`/`SetActiveWindow`, `SendInput`/`mouse_event`/cursor moves, and the
+UI-Automation patterns that actuate a control (`InvokePattern.Invoke`, `TogglePattern.Toggle`,
+`SelectionItemPattern.Select`) - `tools\ui-smoke.ps1` included, because it drives buttons by
+automation name. Synthetic input lands in whatever window has focus, so it types into the user's
+work, and a window forced to the front interrupts him. The file this repository already wrote it
+into is `tools\capture-window.ps1`: it uses `PrintWindow` "so taking a screenshot never has to steal
+foreground focus from whatever the user is doing". **Verify without the desktop instead** - load the
+built assembly and call the shipped class directly, then read the real side effect (file, registry,
+version); that is what proved the 1.4.9 registry work. What only a person can confirm is handed to
+the user with the exact steps: **the user drives the interactive pass**. Standing user instruction
+2026-08-09, [MEMORY.md#decision-log](MEMORY.md#decision-log).
+
 ## Code rules
 
 - **[enforced] Explicit `<Compile Include>` per file.** A new `.cs` file must be added to its `.csproj`
@@ -213,6 +227,14 @@ enforces them.
   `HKCU\Environment\Path`. Nothing is written to `Program Files`, to the machine-wide search path or
   to `HKLM`, no uninstall entry is registered, and both steps stay best effort - a failure may not
   stop the window opening.
+- **[convention] The folder right-click entry is per user, opt-in, and holds no state of its own.**
+  `Services\ExplorerMenu.cs` writes `Directory\Background\shell\BetterTerminal` and
+  `Directory\shell\BetterTerminal` under `HKCU\Software\Classes` only - never `HKCR` directly, never
+  `HKLM`, no elevation. It is written only when the user turns the switch on in the settings window;
+  `ExplorerMenu.Refresh()` on start may re-point an existing entry and **must never create one**. The
+  registry is the single record - do not mirror it into `workspace.json`, or the switch starts lying
+  the first time the user deletes the keys by hand. Added 2026-08-09,
+  [MEMORY.md#decision-log](MEMORY.md#decision-log).
 - **[convention] One deliberate elevation exception: the separate `beterm-service.exe` service
   host, which the first run registers.** Registering a Windows service is machine-wide and needs an
   elevated prompt and the service database, so this is the one component that elevates. Since
@@ -268,6 +290,8 @@ enforces them.
 - **Never use C# 8+ syntax** - it does not compile under `LangVersion 7.3`. R1.
 - **Never hardcode a colour, radius, shadow or font outside `Theme.xaml`.**
 - **Never use emoji** in code, comments, UI text, docs or commit messages. R12.
+- **Never send synthetic input, pull a window to the foreground, or click a control through
+  automation.** R14 - the user's desktop is his, and a script's click is not evidence of anything.
 - **Never delete `docs/_archive/`** - it is the only record of superseded documentation.
 - **Never hardcode the repository path `D:\Multi Terminál Window` inside a `.ps1` file.** PowerShell
   5.1 reads a `-File` script as ANSI unless it has a UTF-8 BOM, so the non-ASCII directory name fails

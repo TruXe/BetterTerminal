@@ -211,6 +211,7 @@
     <Compile Include="Services\DockSite.cs" />
     <Compile Include="Services\IDockHost.cs" />
     <Compile Include="Services\CommandRegistration.cs" />
+    <Compile Include="Services\ExplorerMenu.cs" />
     <Compile Include="Services\DroppedPaths.cs" />
     <Compile Include="Services\FileKind.cs" />
     <Compile Include="Services\PaneShellKind.cs" />

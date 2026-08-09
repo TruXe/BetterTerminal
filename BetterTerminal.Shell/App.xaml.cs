@@ -36,6 +36,10 @@ namespace BetterTerminal.Shell
             // Registering the command is a no-op on every start after the first.
             CommandRegistration.Ensure();
 
+            // Only ever re-points an entry the user turned on themselves, so that an update does
+            // not leave the folder right-click menu starting the build it was registered against.
+            ExplorerMenu.Refresh();
+
             // Dark is the shipped default; the theme service resolves high contrast and the
             // Windows preference from here on.
             ThemeService.Current.Initialize(Resources);
