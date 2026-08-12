@@ -13,6 +13,11 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-12 (1.4.11).** The history is **1 000 000 lines** per pane, not 5000.
+That needed the history to stop being laid out in advance: the ring grows on demand and a line is
+stored at the width it was written, so an idle pane costs nothing and a full million measures 693 MB
+instead of about 2 GB. The newest [decision-log](#decision-log) entry has the measurements.
+
 **Update 2026-08-12 (1.4.10).** Three fixes in the terminal surface and the caption strip: the view
 stays on the lines being read while the session keeps writing (the scroll offset was measured from the
 live bottom and drifted a line per line of output), Ctrl+V reaches the running program when the
@@ -116,6 +121,32 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-12 - A million lines of history, which meant not laying it out in advance
+
+Asked for outright: 5000 lines per pane raised to **1 000 000**. As the grid stood that was not a
+constant to change - it was ~2 GB per pane. `CellGrid` allocated the whole ring up front (a million
+slots is 8 MB of references per pane before a byte of output) and every history line was a full
+screen width of `TerminalCell`, 16 bytes each, so a 40-character line cost 1.9 KB at 120 columns.
+
+Two changes make the number honest. **The ring grows on demand**: it starts at
+`InitialScrollbackSlots` (4096) and doubles - in logical order, oldest to slot zero - until it
+reaches the capacity, so an idle pane pays for a few pages and the copying amortises to a constant
+per line. **A line is stored at the width it was written**: `TrimTrailingBlanks` drops the padding
+off the end on the way into the history. Cells carrying a background colour or an attribute are
+kept whatever they hold, blank or not - that colour is on screen and has to still be there when it
+is scrolled back to - so only genuinely empty default-background padding goes.
+
+**Measured**, 120 columns, 30 rows, a million lines of ~40-character output: idle grid **0 MB**
+managed (13 MB working set, which is the runtime), 50 000 lines **34 MB**, the full million **693 MB**
+managed / 738 MB working set, written in 2.5 s. Read-back checked at indices 0, 1, 499 999 and the
+two newest - all correct. The ring's two new paths were checked separately: growth past the first
+4096 slots, rollover at capacity, a capacity of 100 and a capacity of 0, four cases each ordered
+correctly end to end with the newest history line exactly where it belongs.
+
+**The cost is real and worth stating**: a pane that genuinely scrolls a million lines holds about
+700 MB, and panes do not share a history. Nothing is paid until the lines are written, and the
+settings window now prints the number grouped (`{0:N0}`) instead of `1000000 lines`.
 
 ### 2026-08-12 - The history stopped sliding out from under a reader, a picture can be pasted, and the update check has a button
 

@@ -6,10 +6,16 @@ namespace BetterTerminal.Terminal
     // thread while the renderer reads the same lines on the UI thread.
     public sealed class CellGrid
     {
+        // The history is allowed to be very large, so it is not laid out in advance: a pane that
+        // never scrolls must not pay for a million lines it will not write. The ring starts small and
+        // doubles until it reaches the capacity it was asked for.
+        private const int InitialScrollbackSlots = 4096;
+
         private readonly object _sync = new object();
         private readonly int _scrollbackCapacity;
-        private readonly TerminalCell[][] _scrollback;
-        private readonly long[] _scrollbackVersions;
+
+        private TerminalCell[][] _scrollback;
+        private long[] _scrollbackVersions;
 
         private TerminalCell[][] _lines;
         private long[] _lineVersions;
@@ -41,8 +47,10 @@ namespace BetterTerminal.Terminal
             _columns = Math.Max(1, columns);
             _rows = Math.Max(1, rows);
             _scrollbackCapacity = Math.Max(0, scrollbackCapacity);
-            _scrollback = new TerminalCell[_scrollbackCapacity][];
-            _scrollbackVersions = new long[_scrollbackCapacity];
+
+            int slots = Math.Min(_scrollbackCapacity, InitialScrollbackSlots);
+            _scrollback = new TerminalCell[slots][];
+            _scrollbackVersions = new long[slots];
 
             _lines = new TerminalCell[_rows][];
             _lineVersions = new long[_rows];
@@ -117,7 +125,7 @@ namespace BetterTerminal.Terminal
 
                 while (_blankPrefix < _scrollbackCount)
                 {
-                    int slot = (_scrollbackStart + _blankPrefix) % _scrollbackCapacity;
+                    int slot = (_scrollbackStart + _blankPrefix) % _scrollback.Length;
                     if (!IsBlank(_scrollback[slot]))
                     {
                         _firstUsed = _blankPrefix;
@@ -164,7 +172,7 @@ namespace BetterTerminal.Terminal
 
             if (absoluteIndex < _scrollbackCount)
             {
-                int slot = (_scrollbackStart + absoluteIndex) % _scrollbackCapacity;
+                int slot = (_scrollbackStart + absoluteIndex) % _scrollback.Length;
                 cells = _scrollback[slot];
                 version = _scrollbackVersions[slot];
                 return true;
@@ -561,12 +569,18 @@ namespace BetterTerminal.Terminal
         private void PushScrollback(TerminalCell[] line, long version)
         {
             _scrolledLines++;
+            line = TrimTrailingBlanks(line);
 
-            int slot = (_scrollbackStart + _scrollbackCount) % _scrollbackCapacity;
-            if (_scrollbackCount == _scrollbackCapacity)
+            if (_scrollbackCount == _scrollback.Length && _scrollback.Length < _scrollbackCapacity)
+            {
+                GrowScrollback();
+            }
+
+            int slot = (_scrollbackStart + _scrollbackCount) % _scrollback.Length;
+            if (_scrollbackCount == _scrollback.Length)
             {
                 slot = _scrollbackStart;
-                _scrollbackStart = (_scrollbackStart + 1) % _scrollbackCapacity;
+                _scrollbackStart = (_scrollbackStart + 1) % _scrollback.Length;
 
                 // The oldest line is gone, so every absolute index below it moves down one. When the
                 // line being dropped is the answer itself, the answer is unknown again - not zero,
@@ -581,6 +595,62 @@ namespace BetterTerminal.Terminal
 
             _scrollback[slot] = line;
             _scrollbackVersions[slot] = version;
+        }
+
+        /// <summary>
+        /// Doubles the ring, in logical order, so the oldest line ends up at slot zero. Called only
+        /// when the ring is full and the capacity has not been reached, which is at most once per
+        /// doubling - the copying is amortised to a constant per line.
+        /// </summary>
+        private void GrowScrollback()
+        {
+            int grown = Math.Min(_scrollbackCapacity, Math.Max(1, _scrollback.Length) * 2);
+
+            TerminalCell[][] lines = new TerminalCell[grown][];
+            long[] versions = new long[grown];
+
+            for (int index = 0; index < _scrollbackCount; index++)
+            {
+                int slot = (_scrollbackStart + index) % _scrollback.Length;
+                lines[index] = _scrollback[slot];
+                versions[index] = _scrollbackVersions[slot];
+            }
+
+            _scrollback = lines;
+            _scrollbackVersions = versions;
+            _scrollbackStart = 0;
+        }
+
+        /// <summary>
+        /// Drops the padding off the end of a line on its way into the history. A screen line is as
+        /// wide as the screen, and most of a line of output is the blank right-hand end of it; at a
+        /// million lines that padding is the difference between a manageable history and a gigabyte
+        /// of spaces. Cells carrying a background colour are kept, blank or not, because that colour
+        /// is on screen and has to still be there when it is scrolled back to.
+        /// </summary>
+        private static TerminalCell[] TrimTrailingBlanks(TerminalCell[] line)
+        {
+            int used = line.Length;
+            while (used > 0)
+            {
+                TerminalCell cell = line[used - 1];
+                if (cell.Background != 0 || cell.Flags != CellFlags.None
+                    || (cell.Character != ' ' && cell.Character != '\0'))
+                {
+                    break;
+                }
+
+                used--;
+            }
+
+            if (used == line.Length)
+            {
+                return line;
+            }
+
+            TerminalCell[] trimmed = new TerminalCell[used];
+            Array.Copy(line, trimmed, used);
+            return trimmed;
         }
 
         /// <summary>

@@ -2,7 +2,10 @@ namespace BetterTerminal.Terminal
 {
     public static class TerminalSessionFactory
     {
-        public const int DefaultScrollbackLines = 5000;
+        // A million lines of history per pane. It costs nothing until it is used: CellGrid grows its
+        // ring on demand and stores each line at the width actually written, so an idle pane holds a
+        // few pages and a pane that has scrolled a million lines is the only one paying for them.
+        public const int DefaultScrollbackLines = 1000000;
 
         public static ITerminalSession Create(TerminalBackend backend, int columns, int rows)
         {
