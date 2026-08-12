@@ -106,6 +106,10 @@
             <!-- The tab actions sit in the caption strip with the window buttons, one band, one
                  glyph size; the gap after them is what keeps the plus off the minimise target. -->
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button Style="{StaticResource Bt.Button.CaptionAccent}" Click="OnCheckForUpdates"
+                        AutomationProperties.Name="Check for updates"
+                        ToolTip="Ask now whether a newer version is available"
+                        Content="Check for Updates"/>
                 <Button Style="{StaticResource Bt.Button.CaptionAccessory}"
                         Command="{Binding NewTabCommand}"
                         AutomationProperties.Name="New tab"

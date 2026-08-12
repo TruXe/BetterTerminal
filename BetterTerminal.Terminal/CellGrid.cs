@@ -18,6 +18,7 @@ namespace BetterTerminal.Terminal
 
         private int _scrollbackStart;
         private int _scrollbackCount;
+        private long _scrolledLines;
 
         // Cache behind FirstUsedLine: the answer once known, and how much of the history has already
         // been proved blank so it is never re-examined.
@@ -134,6 +135,17 @@ namespace BetterTerminal.Terminal
         public int ScrollbackCount
         {
             get { return _scrollbackCount; }
+        }
+
+        /// <summary>
+        /// How many lines have left the live screen for the history since the session opened. It only
+        /// ever grows, which is what a reader scrolled up needs: once the history is full, pushing a
+        /// line drops the oldest one and every absolute index moves down by one, so the count of lines
+        /// pushed is the only honest measure of how far the content under the reader has travelled.
+        /// </summary>
+        public long ScrolledLines
+        {
+            get { return _scrolledLines; }
         }
 
         public int TotalLines
@@ -548,6 +560,8 @@ namespace BetterTerminal.Terminal
 
         private void PushScrollback(TerminalCell[] line, long version)
         {
+            _scrolledLines++;
+
             int slot = (_scrollbackStart + _scrollbackCount) % _scrollbackCapacity;
             if (_scrollbackCount == _scrollbackCapacity)
             {

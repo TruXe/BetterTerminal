@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows;
@@ -14,6 +15,9 @@ namespace BetterTerminal.Terminal
         private const double MinimumFontSize = 8;
         private const double MaximumFontSize = 36;
         private const int WheelLinesPerNotch = 3;
+
+        // What Ctrl+V is on the wire; a program reading whole key events is told the key instead.
+        private const char PasteControlCharacter = '\x16';
 
         // A thin lane on the right edge. The lane is wider than the thumb so it is easy to grab; the
         // thumb itself stays slim to keep it unobtrusive over the output.
@@ -44,6 +48,11 @@ namespace BetterTerminal.Terminal
         private float _pixelsPerDip = 1;
         private int _outputPending;
         private int _scrollOffset;
+
+        // How much of the history had already been written when the offset above was last honoured.
+        // The difference against the grid is how far the content under a reader who has scrolled up
+        // has been pushed since, and the offset is corrected by exactly that much.
+        private long _anchoredScrolledLines;
         private int _columns;
         private int _rows;
         private bool _fullRedraw = true;
@@ -163,8 +172,17 @@ namespace BetterTerminal.Terminal
             }
 
             _scrollOffset = 0;
+            _anchoredScrolledLines = _grid == null ? 0 : ReadScrolledLines(_grid);
             _fullRedraw = true;
             UpdateTerminalSize();
+        }
+
+        private static long ReadScrolledLines(CellGrid grid)
+        {
+            lock (grid.SyncRoot)
+            {
+                return grid.ScrolledLines;
+            }
         }
 
         /// <summary>
@@ -620,6 +638,39 @@ namespace BetterTerminal.Terminal
             ScrollTo(_scrollOffset + lines);
         }
 
+        /// <summary>
+        /// Keeps a reader who has scrolled up looking at the same lines while the session keeps
+        /// writing. The offset counts up from the live bottom, so without this every line that
+        /// reaches the history drags the viewport a line further down and the passage being read
+        /// walks off the top - which is what made the history look like it only held a screenful.
+        /// Called with the grid lock held.
+        /// </summary>
+        private void HoldScrollPosition()
+        {
+            long scrolled = _grid.ScrolledLines;
+            if (scrolled == _anchoredScrolledLines)
+            {
+                return;
+            }
+
+            if (_scrollOffset > 0)
+            {
+                // Never past the oldest line that can be reached: once the history is full its top
+                // is genuinely gone, and the view stops there rather than pretending otherwise.
+                int maximum = Math.Max(0, _grid.TotalLines - _grid.Rows - _grid.FirstUsedLine);
+                long held = _scrollOffset + (scrolled - _anchoredScrolledLines);
+                int offset = (int)Math.Max(0, Math.Min(maximum, held));
+
+                if (offset != _scrollOffset)
+                {
+                    _scrollOffset = offset;
+                    _fullRedraw = true;
+                }
+            }
+
+            _anchoredScrolledLines = scrolled;
+        }
+
         private void ScrollTo(int offset)
         {
             if (_grid == null)
@@ -696,6 +747,8 @@ namespace BetterTerminal.Terminal
 
             lock (_grid.SyncRoot)
             {
+                HoldScrollPosition();
+
                 int rows = _grid.Rows;
                 if (_visuals.Count != rows + 1 || _renderedVersions == null || _renderedVersions.Length != rows)
                 {
@@ -1056,14 +1109,67 @@ namespace BetterTerminal.Terminal
             }
         }
 
+        /// <summary>
+        /// Text on the clipboard is typed into the session. A picture has no text form, so the
+        /// keystroke itself is handed over instead: a command line program that takes a pasted
+        /// picture reads the clipboard for itself, and it can only know to do that if it is told the
+        /// key was pressed. Swallowing the key here is what made a captured screenshot impossible to
+        /// paste into one.
+        /// </summary>
         private void Paste()
         {
-            if (_session == null || !Clipboard.ContainsText())
+            if (_session == null)
             {
                 return;
             }
 
-            PasteText(Clipboard.GetText().Replace("\r\n", "\r").Replace("\n", "\r"));
+            string text = null;
+            bool picture = false;
+
+            try
+            {
+                if (Clipboard.ContainsText())
+                {
+                    text = Clipboard.GetText();
+                }
+                else
+                {
+                    picture = Clipboard.ContainsImage();
+                }
+            }
+            catch (ExternalException)
+            {
+                // Another application had the clipboard open. Nothing to paste this time.
+                return;
+            }
+
+            if (!string.IsNullOrEmpty(text))
+            {
+                PasteText(text.Replace("\r\n", "\r").Replace("\n", "\r"));
+                return;
+            }
+
+            if (picture)
+            {
+                ForwardPasteKey();
+            }
+        }
+
+        private void ForwardPasteKey()
+        {
+            bool wholeKeyEvents = false;
+            if (_grid != null)
+            {
+                lock (_grid.SyncRoot)
+                {
+                    wholeKeyEvents = _grid.Win32InputMode;
+                }
+            }
+
+            ScrollToBottom();
+            _session.Write(wholeKeyEvents
+                ? VtKeyEncoder.EncodeKeyEvent(Key.V, PasteControlCharacter, ModifierKeys.Control)
+                : PasteControlCharacter.ToString());
         }
 
         private Brush GetBrush(Color color)

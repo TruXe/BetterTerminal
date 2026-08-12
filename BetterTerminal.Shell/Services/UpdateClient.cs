@@ -29,6 +29,7 @@ namespace BetterTerminal.Shell.Services
         private Timer _selfCheck;
         private volatile bool _running;
         private bool _presenting;
+        private volatile bool _checking;
         private Version _shown;
 
         public UpdateClient(Dispatcher dispatcher)
@@ -58,6 +59,68 @@ namespace BetterTerminal.Shell.Services
                 _selfCheck.Dispose();
                 _selfCheck = null;
             }
+        }
+
+        /// <summary>
+        /// The check the user asked for, from the caption strip. Same probe as the timer's, with one
+        /// difference that matters: it always answers. A silent button is indistinguishable from a
+        /// broken one, so "you are up to date" and "the check could not be made" are notices too, and
+        /// a version already announced is announced again rather than swallowed as a repeat.
+        /// </summary>
+        public void CheckNow()
+        {
+            if (_checking)
+            {
+                return;
+            }
+
+            _checking = true;
+            ThreadPool.QueueUserWorkItem(delegate { RunRequestedCheck(); });
+        }
+
+        private void RunRequestedCheck()
+        {
+            UpdateProbeResult result = null;
+            bool reached = true;
+
+            try
+            {
+                result = UpdateProbe.Check();
+            }
+            catch (Exception)
+            {
+                // No network, no release feed, no answer. The user is told that much and nothing here
+                // is allowed to take the application down.
+                reached = false;
+            }
+
+            _dispatcher.BeginInvoke(new Action(delegate { PresentRequested(result, reached); }));
+        }
+
+        private void PresentRequested(UpdateProbeResult result, bool reached)
+        {
+            _checking = false;
+
+            if (result != null)
+            {
+                // Asking again is a request to be shown the answer, so the once-only guard is lifted.
+                _shown = null;
+                Present(result.Version, result.Launcher);
+                return;
+            }
+
+            ToastNotification toast = new ToastNotification
+            {
+                AppName = "BetterTerminal",
+                Title = reached ? "No update available" : "Update check failed",
+                Message = reached
+                    ? "Version " + UpdateShared.NormalizedString(UpdateShared.Normalize(SelfInstall.RunningVersion)) +
+                        " is the newest there is."
+                    : "The list of releases could not be reached. Nothing was changed; try again later.",
+                Duration = TimeSpan.FromSeconds(8)
+            };
+
+            toast.Show();
         }
 
         private void SelfCheck()

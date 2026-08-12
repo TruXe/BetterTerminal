@@ -149,5 +149,15 @@ namespace BetterTerminal.Shell.Views
         {
             Close();
         }
+
+        // The update watch runs on its own timer; this is the same check on demand, and it answers
+        // either way so pressing it is never a shot into the dark.
+        private void OnCheckForUpdates(object sender, RoutedEventArgs e)
+        {
+            if (_updateClient != null)
+            {
+                _updateClient.CheckNow();
+            }
+        }
     }
 }

@@ -132,6 +132,41 @@
         <Setter Property="Width" Value="{DynamicResource Bt.Size.CaptionAccessoryWidth}"/>
     </Style>
 
+    <!-- A caption accessory that carries a label and the accent fill: the one action in the strip
+         that is worth finding rather than recognising. Same band and height as its neighbours, so
+         the strip stays one row of controls. -->
+    <Style x:Key="Bt.Button.CaptionAccent" TargetType="Button" BasedOn="{StaticResource Bt.Button.Caption}">
+        <Setter Property="FontFamily" Value="{DynamicResource Bt.Font.Ui}"/>
+        <Setter Property="FontSize" Value="{DynamicResource Bt.FontSize.BodySmall}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Width" Value="Auto"/>
+        <Setter Property="Padding" Value="10,0,10,0"/>
+        <Setter Property="Foreground" Value="{DynamicResource Bt.AccentInkBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Fill" Background="{DynamicResource Bt.AccentFillDefaultBrush}"
+                            CornerRadius="{DynamicResource Bt.Radius.Control}"
+                            Margin="0,4,8,4">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Bt.AccentFillPointerOverBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Bt.AccentFillPressedBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Fill" Property="Background" Value="{DynamicResource Bt.AccentFillDisabledBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style x:Key="Bt.Button.CaptionClose" TargetType="Button" BasedOn="{StaticResource Bt.Button.Caption}">
         <Setter Property="Template">
             <Setter.Value>

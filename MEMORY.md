@@ -13,6 +13,13 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-12 (1.4.10).** Three fixes in the terminal surface and the caption strip: the view
+stays on the lines being read while the session keeps writing (the scroll offset was measured from the
+live bottom and drifted a line per line of output), Ctrl+V reaches the running program when the
+clipboard holds a picture instead of being swallowed, and a **Check for Updates** button runs the
+update probe on demand and answers either way. The newest [decision-log](#decision-log) entry has the
+measurements.
+
 **Update 2026-08-09 (1.4.9).** The application can put itself in the menu a folder shows on a right
 click - named, with its icon, opening that folder as a project - and a new **Integration** page in
 the settings window turns it on and off. It is off until asked for, per user, and the registry is the
@@ -109,6 +116,41 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-12 - The history stopped sliding out from under a reader, a picture can be pasted, and the update check has a button
+
+**The scroll position was measured from the wrong end.** `TerminalRenderer._scrollOffset` counts up
+from the live bottom, and `RenderViewport` reads `top = TotalLines - Rows - offset`. Every line the
+shell pushed into the history grew `TotalLines`, so the passage being read walked one line further up
+per line written and was gone within a screenful - which is exactly what "the terminal does not hold
+the scroll context, then the banner is back" describes. It was never a short history: a 300-line run
+puts all 277 overflow lines in the grid (measured). `CellGrid` now exposes **`ScrolledLines`**, a
+monotonic count of lines that have left the screen - the only honest measure, because once the ring is
+full a push also drops the oldest line and every absolute index moves down one, while `TotalLines`
+stops changing. `TerminalRenderer.HoldScrollPosition`, called under the grid lock at the top of
+`RenderViewport`, adds that difference to the offset while the offset is above zero, clamped to the
+oldest reachable line. Measured with a probe replaying the renderer's arithmetic against a live
+session writing 25 lines/s: parked on "line 19", the old formula drifted to lines 44, 68, 94, 120,
+145, 171 over six samples; the new one stayed on line 19 through all six. At the bottom
+(`offset == 0`) nothing changes, so live output still follows.
+
+**Ctrl+V was swallowed, so a captured picture could not be pasted into a command line tool.**
+`Paste()` returned early unless the clipboard held text, and the key never reached the child - a tool
+that takes a pasted screenshot reads the clipboard itself and has to be told the key was pressed.
+Text still goes in as text; when there is none and the clipboard holds a picture, the keystroke is
+handed over instead - `\x16`, or the whole key event when the host has asked for those. Clipboard
+access is wrapped against `ExternalException`, which is what another application holding the clipboard
+open throws, and would otherwise land unhandled on the UI thread.
+
+**A Check for Updates button in the caption strip.** `Bt.Button.CaptionAccent` in `Controls.xaml` -
+accent fill, ink-on-accent label, same band and height as its neighbours - sits left of the new-tab
+accessory and calls the new `UpdateClient.CheckNow()`. It runs the same probe as the hourly timer on a
+pool thread, and unlike the timer it **always answers**: the update notice, "No update available", or
+"Update check failed", because a silent button cannot be told from a broken one. Asking again clears
+the once-only guard, so a version already announced is shown again rather than swallowed as a repeat.
+
+Released as **1.4.10** on the user's word, rebased onto the 1.4.9 folder-menu work that was already on
+`origin` and had never been in this working tree.
 
 ### 2026-08-09 - Verification never touches the user's desktop (R14)
 
