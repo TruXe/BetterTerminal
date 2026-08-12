@@ -15,6 +15,7 @@ namespace BetterTerminal.Terminal
         private const double MinimumFontSize = 8;
         private const double MaximumFontSize = 36;
         private const int WheelLinesPerNotch = 3;
+        private const int ChaseBottomFrames = 30;
 
         // What Ctrl+V is on the wire; a program reading whole key events is told the key instead.
         private const char PasteControlCharacter = '\x16';
@@ -53,6 +54,14 @@ namespace BetterTerminal.Terminal
         // The difference against the grid is how far the content under a reader who has scrolled up
         // has been pushed since, and the offset is corrected by exactly that much.
         private long _anchoredScrolledLines;
+
+        // Frames left in which the anchor stands aside because the reader is on their way back to
+        // the live end. Holding position and catching up are opposite requests, and while output is
+        // arriving the anchor wins every time - each notch down is overtaken by the lines written in
+        // between, which reads as a view that will not come back. A downward gesture therefore
+        // suspends the anchor for about half a second of frames, and parking resumes the moment the
+        // gesture stops.
+        private int _chaseBottomFrames;
         private int _columns;
         private int _rows;
         private bool _fullRedraw = true;
@@ -240,6 +249,8 @@ namespace BetterTerminal.Terminal
 
         public void ScrollToBottom()
         {
+            _chaseBottomFrames = 0;
+
             if (_scrollOffset == 0)
             {
                 return;
@@ -635,6 +646,27 @@ namespace BetterTerminal.Terminal
 
         private void ScrollBy(int lines)
         {
+            if (_grid == null)
+            {
+                return;
+            }
+
+            if (lines < 0)
+            {
+                _chaseBottomFrames = ChaseBottomFrames;
+            }
+            else if (lines > 0)
+            {
+                _chaseBottomFrames = 0;
+            }
+
+            // Everything written since the last paint is folded in before the reader's own move, so
+            // a notch is applied to where the view actually is rather than to a stale offset.
+            lock (_grid.SyncRoot)
+            {
+                HoldScrollPosition();
+            }
+
             ScrollTo(_scrollOffset + lines);
         }
 
@@ -653,7 +685,7 @@ namespace BetterTerminal.Terminal
                 return;
             }
 
-            if (_scrollOffset > 0)
+            if (_scrollOffset > 0 && _chaseBottomFrames == 0)
             {
                 // Never past the oldest line that can be reached: once the history is full its top
                 // is genuinely gone, and the view stops there rather than pretending otherwise.
@@ -743,6 +775,11 @@ namespace BetterTerminal.Terminal
             if (_grid == null || _regularFace == null)
             {
                 return;
+            }
+
+            if (_chaseBottomFrames > 0)
+            {
+                _chaseBottomFrames--;
             }
 
             lock (_grid.SyncRoot)

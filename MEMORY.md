@@ -13,6 +13,12 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-12 (1.4.12).** Scrolling in a pane that keeps writing works again:
+the position anchor added in 1.4.10 was overruling the reader in both directions, so a wheel notch
+down ended higher than it started. A downward gesture now suspends the anchor for about half a
+second and the drift is folded in before the reader's own move. **1.4.11 as published carries the
+fault**; the newest [decision-log](#decision-log) entry has the measurements.
+
 **Update 2026-08-12 (1.4.11).** The history is **1 000 000 lines** per pane, not 5000.
 That needed the history to stop being laid out in advance: the ring grows on demand and a line is
 stored at the width it was written, so an idle pane costs nothing and a full million measures 693 MB
@@ -121,6 +127,31 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-12 - Holding position and catching up are opposite requests, and the anchor was winning both
+
+**Reported straight after 1.4.11: "I cannot scroll in the console now."** The anchor added in 1.4.10
+was applied unconditionally, so while output kept arriving it beat the reader in both directions. A
+wheel notch down moves 3 lines; the lines written between one notch and the next moved the view
+further up than that, so **every downward notch ended higher than it began**. Reproduced by driving
+the real `TerminalRenderer` off screen (no window shown, nothing given focus, per R14) with 20 lines
+arriving per notch: parked at 63, a notch down landed at **120**. With the view then pinned at the
+oldest reachable line, upward scrolling was clamped and downward scrolling was overtaken - both
+directions dead, which is exactly what "cannot scroll" means.
+
+Two changes. **A downward gesture suspends the anchor** for `ChaseBottomFrames` (30 frames, about
+half a second), counted down in `RenderViewport`: holding position and catching up cannot both be
+honoured, and while the reader is on their way back to the live end the live end has to stop running
+away. Parking resumes as soon as the gesture stops, and any keystroke still snaps to the bottom as
+before. **The drift is folded in before the reader's own move**, in `ScrollBy` rather than only at
+paint time, so a notch applies to where the view actually is instead of to a stale offset.
+
+Measured on the same harness after the change: 63 -> 54 -> 45 -> 36 -> 27, three lines per notch
+with 20 lines arriving in between, converging on the live end; parking still holds exactly (parked at
+32, offset 72 after 40 lines). Both properties at once, which is the point.
+
+**The lesson, worth keeping:** an automatic correction that fights the user needs an explicit way for
+the user to win. The 1.4.10 anchor had none, and one release later it read as a broken scrollbar.
 
 ### 2026-08-12 - A million lines of history, which meant not laying it out in advance
 
