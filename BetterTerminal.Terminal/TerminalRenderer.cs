@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -37,6 +39,11 @@ namespace BetterTerminal.Terminal
 
         private ITerminalSession _session;
         private CellGrid _grid;
+        private TerminalLinkOptions _linkOptions = new TerminalLinkOptions();
+        private TerminalLinkOpener _linkOpener = new TerminalLinkOpener();
+        private TerminalLink _hoverLink;
+        private TerminalLink _pressedLink;
+        private Point _pressedAt;
         private GlyphTypeface _regularFace;
         private GlyphTypeface _boldFace;
         private long[] _renderedVersions;
@@ -111,6 +118,25 @@ namespace BetterTerminal.Terminal
 
             Loaded += OnLoaded;
             Unloaded += OnUnloaded;
+        }
+
+        public event EventHandler<TerminalLinkMessageEventArgs> LinkReported;
+
+        public TerminalLinkOptions LinkOptions
+        {
+            get { return _linkOptions; }
+
+            set
+            {
+                _linkOptions = value ?? new TerminalLinkOptions();
+                ClearHover();
+            }
+        }
+
+        public TerminalLinkOpener LinkOpener
+        {
+            get { return _linkOpener; }
+            set { _linkOpener = value ?? new TerminalLinkOpener(); }
         }
 
         public Color DefaultBackground { get; set; }
@@ -242,6 +268,8 @@ namespace BetterTerminal.Terminal
                 _session = null;
             }
 
+            ClearHover();
+            _pressedLink = null;
             _grid = null;
             _frameTimer.Stop();
             _caretTimer.Stop();
@@ -256,8 +284,47 @@ namespace BetterTerminal.Terminal
                 return;
             }
 
+            ClearHover();
             _scrollOffset = 0;
             _fullRedraw = true;
+        }
+
+        public IList<TerminalLink> VisibleLinks()
+        {
+            List<TerminalLink> links = new List<TerminalLink>();
+            if (_grid == null)
+            {
+                return links;
+            }
+
+            lock (_grid.SyncRoot)
+            {
+                int rows = _grid.Rows;
+                int top = Math.Max(0, _grid.TotalLines - rows - _scrollOffset);
+                links.AddRange(_grid.Links.Visible(_grid, top, rows, _linkOptions.DetectionEnabled));
+            }
+
+            return links;
+        }
+
+        public void OpenLink(TerminalLink link)
+        {
+            if (link == null)
+            {
+                return;
+            }
+
+            TerminalLinkResult result = _linkOpener.Open(link, _linkOptions);
+            if (string.IsNullOrEmpty(result.Message))
+            {
+                return;
+            }
+
+            EventHandler<TerminalLinkMessageEventArgs> handler = LinkReported;
+            if (handler != null)
+            {
+                handler(this, new TerminalLinkMessageEventArgs(result.Message));
+            }
         }
 
         protected override Visual GetVisualChild(int index)
@@ -410,11 +477,16 @@ namespace BetterTerminal.Terminal
             Focus();
 
             Point position = e.GetPosition(this);
+            _pressedLink = null;
+
             if (BeginScrollbarDrag(position))
             {
                 e.Handled = true;
                 return;
             }
+
+            _pressedAt = position;
+            _pressedLink = ActivationHeld() ? LinkAt(position) : null;
 
             PointToCell(position, out _anchorLine, out _anchorColumn);
             _activeLine = _anchorLine;
@@ -438,6 +510,7 @@ namespace BetterTerminal.Terminal
 
             if (!_selecting)
             {
+                UpdateHover(e.GetPosition(this));
                 return;
             }
 
@@ -463,11 +536,36 @@ namespace BetterTerminal.Terminal
                 _selecting = false;
                 ReleaseMouseCapture();
             }
+
+            TerminalLink link = _pressedLink;
+            _pressedLink = null;
+
+            if (link != null && IsClick(e.GetPosition(this)))
+            {
+                _hasSelection = false;
+                _fullRedraw = true;
+                OpenLink(link);
+            }
+        }
+
+        protected override void OnMouseLeave(MouseEventArgs e)
+        {
+            base.OnMouseLeave(e);
+            ClearHover();
         }
 
         protected override void OnMouseRightButtonUp(MouseButtonEventArgs e)
         {
             base.OnMouseRightButtonUp(e);
+
+            TerminalLink link = LinkAt(e.GetPosition(this));
+            if (link != null)
+            {
+                ShowLinkMenu(link);
+                e.Handled = true;
+                return;
+            }
+
             Paste();
             e.Handled = true;
         }
@@ -725,6 +823,7 @@ namespace BetterTerminal.Terminal
                 return;
             }
 
+            ClearHover();
             _scrollOffset = offset;
             _fullRedraw = true;
             RenderViewport();
@@ -918,10 +1017,45 @@ namespace BetterTerminal.Terminal
                     DrawRun(context, cells, runStart, column - runStart, y, firstSelected);
                 }
 
+                DrawLinkHighlight(context, absoluteLine, y);
+
                 if (cursorColumn >= 0 && cursorColumn < cells.Length)
                 {
                     DrawCaret(context, cells, cursorColumn, y);
                 }
+            }
+        }
+
+        private void DrawLinkHighlight(DrawingContext context, int absoluteLine, double y)
+        {
+            TerminalLink link = _hoverLink;
+            if (link == null)
+            {
+                return;
+            }
+
+            double underlineY = Math.Floor(y + _baseline + 1.5) + 0.5;
+
+            foreach (TerminalLinkRange range in link.Ranges)
+            {
+                if (range.Line != absoluteLine)
+                {
+                    continue;
+                }
+
+                int start = Math.Max(0, range.Start);
+                int end = Math.Max(start, range.End);
+                if (end <= start)
+                {
+                    continue;
+                }
+
+                double x = start * _cellWidth;
+                double width = (end - start) * _cellWidth;
+                context.DrawLine(
+                    new Pen(GetBrush(DefaultForeground), 1),
+                    new Point(x, underlineY),
+                    new Point(x + width, underlineY));
             }
         }
 
@@ -1085,6 +1219,156 @@ namespace BetterTerminal.Terminal
             end = absoluteLine == lastLine ? lastColumn : _grid.Columns;
         }
 
+        private bool ActivationHeld()
+        {
+            if (_linkOptions.Activation == LinkActivation.None)
+            {
+                return true;
+            }
+
+            ModifierKeys required = _linkOptions.Activation == LinkActivation.Alt
+                ? ModifierKeys.Alt
+                : ModifierKeys.Control;
+
+            return (Keyboard.Modifiers & required) == required;
+        }
+
+        private bool IsClick(Point position)
+        {
+            return Math.Abs(position.X - _pressedAt.X) <= SystemParameters.MinimumHorizontalDragDistance
+                && Math.Abs(position.Y - _pressedAt.Y) <= SystemParameters.MinimumVerticalDragDistance;
+        }
+
+        private TerminalLink LinkAt(Point position)
+        {
+            if (_grid == null || position.X < 0 || position.Y < 0
+                || position.X >= ActualWidth || position.Y >= ActualHeight)
+            {
+                return null;
+            }
+
+            if (_scrollbarShown && position.X >= ActualWidth - ScrollbarLaneWidth)
+            {
+                return null;
+            }
+
+            lock (_grid.SyncRoot)
+            {
+                int line;
+                int column;
+                PointToLinkCell(position, out line, out column);
+
+                int rows = _grid.Rows;
+                int top = Math.Max(0, _grid.TotalLines - rows - _scrollOffset);
+                return _grid.Links.Find(_grid, line, column, top, rows, _linkOptions.DetectionEnabled);
+            }
+        }
+
+        private void UpdateHover(Point position)
+        {
+            if (_grid == null)
+            {
+                ClearHover();
+                return;
+            }
+
+            TerminalLink link = LinkAt(position);
+            if (SameLink(link, _hoverLink))
+            {
+                return;
+            }
+
+            TerminalLink previous = _hoverLink;
+            _hoverLink = link;
+            Cursor = link == null ? null : Cursors.Hand;
+
+            lock (_grid.SyncRoot)
+            {
+                int top = Math.Max(0, _grid.TotalLines - _grid.Rows - _scrollOffset);
+                InvalidateLinkRows(previous, top);
+                InvalidateLinkRows(link, top);
+            }
+
+            RenderViewport();
+        }
+
+        private void ClearHover()
+        {
+            if (_hoverLink == null)
+            {
+                return;
+            }
+
+            _hoverLink = null;
+            Cursor = null;
+            _fullRedraw = true;
+        }
+
+        private void InvalidateLinkRows(TerminalLink link, int top)
+        {
+            if (link == null || _renderedVersions == null)
+            {
+                return;
+            }
+
+            foreach (TerminalLinkRange range in link.Ranges)
+            {
+                int row = range.Line - top;
+                if (row >= 0 && row < _renderedVersions.Length)
+                {
+                    _renderedVersions[row] = -1;
+                }
+            }
+        }
+
+        private static bool SameLink(TerminalLink first, TerminalLink second)
+        {
+            if (first == null || second == null)
+            {
+                return first == null && second == null;
+            }
+
+            return first.Id == second.Id;
+        }
+
+        private void ShowLinkMenu(TerminalLink link)
+        {
+            ContextMenu menu = new ContextMenu();
+            menu.PlacementTarget = this;
+            menu.Placement = PlacementMode.MousePoint;
+
+            MenuItem open = new MenuItem();
+            open.Header = "Open link";
+            open.Click += delegate { OpenLink(link); };
+            menu.Items.Add(open);
+
+            MenuItem copy = new MenuItem();
+            copy.Header = "Copy link address";
+            copy.Click += delegate { CopyLink(link); };
+            menu.Items.Add(copy);
+
+            menu.IsOpen = true;
+        }
+
+        private void CopyLink(TerminalLink link)
+        {
+            try
+            {
+                Clipboard.SetText(link.Uri);
+            }
+            catch (ExternalException)
+            {
+            }
+        }
+
+        private void PointToLinkCell(Point point, out int line, out int column)
+        {
+            int rows = _grid.Rows;
+            int row = TerminalLinkHitTest.RowAt(point.Y, _cellHeight, rows);
+            line = TerminalLinkHitTest.LineAt(row, _grid.TotalLines, rows, _scrollOffset);
+            column = TerminalLinkHitTest.ColumnAt(point.X, _cellWidth, _grid.Columns);
+        }
+
         private void PointToCell(Point point, out int line, out int column)
         {
             int rows = _grid == null ? 1 : _grid.Rows;
@@ -1129,6 +1413,11 @@ namespace BetterTerminal.Terminal
                     StringBuilder lineText = new StringBuilder();
                     for (int column = start; column < Math.Min(end, cells.Length); column++)
                     {
+                        if ((cells[column].Flags & CellFlags.WideTrailing) != 0)
+                        {
+                            continue;
+                        }
+
                         lineText.Append(cells[column].Character == '\0' ? ' ' : cells[column].Character);
                     }
 

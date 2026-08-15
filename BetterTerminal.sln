@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterTerminal.Service", "B
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterTerminal.Notifications", "BetterTerminal.Notifications\BetterTerminal.Notifications.csproj", "{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BetterTerminal.Tests", "BetterTerminal.Tests\BetterTerminal.Tests.csproj", "{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000B}"
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BetterTerminal.Bootstrap", "BetterTerminal.Bootstrap\BetterTerminal.Bootstrap.vcxproj", "{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40009}"
 	ProjectSection(ProjectDependencies) = postProject
 		{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40003} = {6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C40003}
@@ -72,6 +74,10 @@ Global
 		{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000A}.Debug|x64.Build.0 = Debug|x64
 		{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000A}.Release|x64.ActiveCfg = Release|x64
 		{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000A}.Release|x64.Build.0 = Release|x64
+		{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000B}.Debug|x64.ActiveCfg = Debug|x64
+		{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000B}.Debug|x64.Build.0 = Debug|x64
+		{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000B}.Release|x64.ActiveCfg = Release|x64
+		{6B7A6E2C-1C24-4E1D-9E2F-A9D2B1C4000B}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

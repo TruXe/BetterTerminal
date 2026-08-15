@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -51,6 +52,8 @@ namespace BetterTerminal.Shell.Views
         public event EventHandler DropTargetChanged;
 
         public event EventHandler<PaneDropEventArgs> DropReported;
+
+        public event EventHandler<TerminalLinkMessageEventArgs> LinkReported;
 
         public bool IsDropTarget
         {
@@ -136,6 +139,30 @@ namespace BetterTerminal.Shell.Views
             _renderer.CaretShape = shape;
             _renderer.CaretBlinks = blinks;
             _renderer.Redraw();
+        }
+
+        public void ApplyLinks(TerminalLinkOpener opener, TerminalLinkOptions options)
+        {
+            if (_renderer == null)
+            {
+                return;
+            }
+
+            _renderer.LinkOpener = opener;
+            _renderer.LinkOptions = options;
+        }
+
+        public IList<TerminalLink> VisibleLinks()
+        {
+            return _renderer == null ? new List<TerminalLink>() : _renderer.VisibleLinks();
+        }
+
+        public void OpenLink(TerminalLink link)
+        {
+            if (_renderer != null)
+            {
+                _renderer.OpenLink(link);
+            }
         }
 
         public void ApplyColors(Color background, Color foreground, Color caret, Color selection)
@@ -348,6 +375,7 @@ namespace BetterTerminal.Shell.Views
             if (pseudoConsole != null)
             {
                 _renderer = new TerminalRenderer();
+                _renderer.LinkReported += OnRendererLinkReported;
                 ApplyThemeColors();
                 _renderer.Attach(pseudoConsole, pseudoConsole.Grid);
                 Content = _renderer;
@@ -387,6 +415,15 @@ namespace BetterTerminal.Shell.Views
 
             object value = Application.Current.TryFindResource(key);
             return value is Color ? (Color)value : fallback;
+        }
+
+        private void OnRendererLinkReported(object sender, TerminalLinkMessageEventArgs e)
+        {
+            EventHandler<TerminalLinkMessageEventArgs> handler = LinkReported;
+            if (handler != null)
+            {
+                handler(this, e);
+            }
         }
 
         private void OnSessionTitleChanged(object sender, TerminalTitleEventArgs e)

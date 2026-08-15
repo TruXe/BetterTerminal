@@ -499,6 +499,102 @@
                     </StackPanel>
                 </Grid>
 
+                <!-- ===== Links page ===== -->
+                <Grid Margin="{DynamicResource Bt.Space.ContentPad}">
+                    <Grid.Style>
+                        <Style TargetType="Grid" BasedOn="{StaticResource Bt.SettingsPage}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedPage.Title}" Value="Links">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Style="{StaticResource Bt.Text.Subtitle}" FontSize="17" Text="Links"/>
+                        <TextBlock Margin="0,6,0,0" MaxWidth="620" Style="{StaticResource Bt.Text.Paragraph}"
+                                   Text="An address printed by a program can be opened from the pane it was printed in. A program that marks its own links has them recognised whether or not the search below is on."/>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Margin="0,18,0,0" Padding="18,16,18,16"
+                            Style="{StaticResource Bt.Card}"
+                            Background="{DynamicResource Bt.ElevatedBackgroundBrush}">
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" MaxWidth="560" HorizontalAlignment="Left">
+                                    <TextBlock Style="{StaticResource Bt.Text.BodyStrong}"
+                                               Text="Find addresses in printed text"/>
+                                    <TextBlock Margin="0,6,0,0" Style="{StaticResource Bt.Text.Paragraph}"
+                                               Text="Looks over the lines on screen for something that reads as an address and makes it clickable."/>
+                                </StackPanel>
+                                <ToggleButton Grid.Column="1" x:Name="DetectLinksToggle" Margin="18,0,0,0"
+                                              VerticalAlignment="Top" HorizontalAlignment="Right"
+                                              Style="{StaticResource Bt.ToggleSwitch}"
+                                              IsChecked="{Binding DetectLinks, Mode=TwoWay}"
+                                              AutomationProperties.Name="Find addresses in printed text"/>
+                            </Grid>
+
+                            <TextBlock Margin="0,20,0,0" Style="{StaticResource Bt.Text.BodyStrong}"
+                                       Text="A click opens a link while holding"/>
+                            <Border Margin="0,10,0,0" HorizontalAlignment="Left"
+                                    BorderBrush="{DynamicResource Bt.StrokeDefaultBrush}"
+                                    BorderThickness="1" CornerRadius="{DynamicResource Bt.Radius.Control}">
+                                <StackPanel Orientation="Horizontal">
+                                    <RadioButton Style="{StaticResource Bt.Segment}" GroupName="LinkActivation"
+                                                 IsChecked="{Binding LinkNeedsControl, Mode=TwoWay}"
+                                                 Content="Ctrl"/>
+                                    <RadioButton Style="{StaticResource Bt.Segment}" GroupName="LinkActivation"
+                                                 IsChecked="{Binding LinkNeedsAlt, Mode=TwoWay}"
+                                                 Content="Alt"/>
+                                    <RadioButton Style="{StaticResource Bt.Segment}" GroupName="LinkActivation"
+                                                 IsChecked="{Binding LinkNeedsNothing, Mode=TwoWay}"
+                                                 Content="Nothing"/>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Margin="0,10,0,0" MaxWidth="620" Style="{StaticResource Bt.Text.Paragraph}"
+                                       Text="Dragging over text still selects it and never opens anything."/>
+
+                            <TextBlock Margin="0,20,0,0" Style="{StaticResource Bt.Text.BodyStrong}"
+                                       Text="Address kinds this terminal opens"/>
+                            <TextBox Margin="0,10,0,0" Width="320" HorizontalAlignment="Left"
+                                     x:Name="LinkSchemesBox"
+                                     Style="{StaticResource Bt.TextBox.Mono}"
+                                     Text="{Binding LinkSchemes, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                     AutomationProperties.Name="Address kinds this terminal opens"/>
+                            <TextBlock Margin="0,10,0,0" MaxWidth="620" Style="{StaticResource Bt.Text.Paragraph}"
+                                       Text="Separate them with commas. Anything else is refused at the moment it is clicked and the pane says so."/>
+
+                            <Grid Margin="0,20,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0" MaxWidth="560" HorizontalAlignment="Left">
+                                    <TextBlock Style="{StaticResource Bt.Text.BodyStrong}"
+                                               Text="Ask first when a link could mislead"/>
+                                    <TextBlock Margin="0,6,0,0" Style="{StaticResource Bt.Text.Paragraph}"
+                                               Text="Shows the real target before opening when the name of the host is written in another script, when it is encoded, or when the program printed one thing and pointed somewhere else."/>
+                                </StackPanel>
+                                <ToggleButton Grid.Column="1" x:Name="ConfirmLinksToggle" Margin="18,0,0,0"
+                                              VerticalAlignment="Top" HorizontalAlignment="Right"
+                                              Style="{StaticResource Bt.ToggleSwitch}"
+                                              IsChecked="{Binding ConfirmLinks, Mode=TwoWay}"
+                                              AutomationProperties.Name="Ask first when a link could mislead"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
                 <!-- ===== Integration page ===== -->
                 <Grid Margin="{DynamicResource Bt.Space.ContentPad}">
                     <Grid.Style>

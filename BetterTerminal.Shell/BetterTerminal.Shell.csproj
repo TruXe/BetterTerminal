@@ -216,6 +216,7 @@
     <Compile Include="Services\FileKind.cs" />
     <Compile Include="Services\PaneShellKind.cs" />
     <Compile Include="Services\HostReachability.cs" />
+    <Compile Include="Services\LinkConfirmation.cs" />
     <Compile Include="Services\OpenedFile.cs" />
     <Compile Include="Services\SelfInstall.cs" />
     <Compile Include="Services\UpdateApply.cs" />

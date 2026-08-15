@@ -13,6 +13,7 @@ namespace BetterTerminal.Terminal
 
         private readonly object _sync = new object();
         private readonly int _scrollbackCapacity;
+        private readonly TerminalLinkMap _links = new TerminalLinkMap();
 
         private TerminalCell[][] _scrollback;
         private long[] _scrollbackVersions;
@@ -105,6 +106,13 @@ namespace BetterTerminal.Terminal
 
         public CellFlags CurrentFlags { get; set; }
 
+        public ushort CurrentLinkId { get; set; }
+
+        public TerminalLinkMap Links
+        {
+            get { return _links; }
+        }
+
         /// <summary>
         /// The oldest line worth scrolling to: the first one in the history that has anything on it.
         /// Blank lines reach the history honestly - shrinking the pane pushes the top of the screen
@@ -195,9 +203,13 @@ namespace BetterTerminal.Terminal
         {
             if (_pendingWrap)
             {
-                _pendingWrap = false;
-                CursorColumn = 0;
-                LineFeed();
+                WrapLine();
+            }
+
+            int width = CharacterWidth.IsWide(character) ? 2 : 1;
+            if (width == 2 && CursorColumn + 1 >= _columns && AutoWrap && _columns > 1)
+            {
+                WrapLine();
             }
 
             TerminalCell[] line = _lines[CursorRow];
@@ -205,6 +217,18 @@ namespace BetterTerminal.Terminal
             line[CursorColumn].Foreground = CurrentForeground;
             line[CursorColumn].Background = CurrentBackground;
             line[CursorColumn].Flags = CurrentFlags;
+            line[CursorColumn].LinkId = CurrentLinkId;
+
+            if (width == 2 && CursorColumn + 1 < _columns)
+            {
+                line[CursorColumn + 1].Character = '\0';
+                line[CursorColumn + 1].Foreground = CurrentForeground;
+                line[CursorColumn + 1].Background = CurrentBackground;
+                line[CursorColumn + 1].Flags = CurrentFlags | CellFlags.WideTrailing;
+                line[CursorColumn + 1].LinkId = CurrentLinkId;
+                CursorColumn++;
+            }
+
             _lineVersions[CursorRow] = ++_versionCounter;
 
             if (CursorColumn + 1 >= _columns)
@@ -218,6 +242,27 @@ namespace BetterTerminal.Terminal
             {
                 CursorColumn++;
             }
+        }
+
+        public static bool IsWrapped(TerminalCell[] line)
+        {
+            return line != null && line.Length > 0
+                && (line[line.Length - 1].Flags & CellFlags.LineWrapped) != 0;
+        }
+
+        private void WrapLine()
+        {
+            _pendingWrap = false;
+
+            TerminalCell[] line = _lines[CursorRow];
+            if (line.Length > 0)
+            {
+                line[line.Length - 1].Flags |= CellFlags.LineWrapped;
+                _lineVersions[CursorRow] = ++_versionCounter;
+            }
+
+            CursorColumn = 0;
+            LineFeed();
         }
 
         public void CarriageReturn()
@@ -686,6 +731,12 @@ namespace BetterTerminal.Terminal
             TerminalCell[] resized = CreateBlankLine(columns);
             int copy = Math.Min(columns, line.Length);
             Array.Copy(line, resized, copy);
+
+            if (copy > 0)
+            {
+                resized[copy - 1].Flags &= ~CellFlags.LineWrapped;
+            }
+
             return resized;
         }
 

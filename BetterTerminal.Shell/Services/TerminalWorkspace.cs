@@ -26,11 +26,14 @@ namespace BetterTerminal.Shell.Services
         // Icon-font code point, built from its number: this file stays plain ASCII, because the
         // compiler only reads it as UTF-8 when it carries a byte order mark.
         private static readonly string ProjectCommandGlyph = ((char)0xE756).ToString();
+        private static readonly string LinkCommandGlyph = ((char)0xE71B).ToString();
 
         private readonly MainViewModel _model;
         private readonly Window _owner;
         private readonly CommandPalette _palette;
         private readonly SettingsViewModel _settings = new SettingsViewModel();
+        private readonly TerminalLinkOptions _linkOptions = new TerminalLinkOptions();
+        private readonly TerminalLinkOpener _linkOpener;
 
         private SettingsWindow _settingsWindow;
         private FilesPanel _filesPanel;
@@ -68,6 +71,10 @@ namespace BetterTerminal.Shell.Services
             _settings.Changed += OnSettingsChanged;
             ThemeService.Current.ThemeChanged += OnThemeChanged;
 
+            _linkOpener = new TerminalLinkOpener(null,
+                delegate(TerminalLinkPrompt prompt) { return LinkConfirmation.Ask(_owner, prompt); });
+            RefreshLinkOptions();
+
             _palette.InputRequested += OnPaletteInput;
         }
 
@@ -79,6 +86,9 @@ namespace BetterTerminal.Shell.Services
                 _settings.ApplyStored(workspace.Theme, workspace.Scheme, workspace.FontFamily,
                     workspace.FontSize, workspace.CursorShape, workspace.BlinkCursor);
                 _settings.SplitUsesActiveProfile = workspace.SplitUsesActiveProfile;
+                _settings.ApplyStoredLinks(workspace.DetectLinks, workspace.LinkActivation,
+                    workspace.LinkSchemes, workspace.ConfirmLinks);
+                RefreshLinkOptions();
                 RestorePlacement(workspace);
             }
 
@@ -140,6 +150,10 @@ namespace BetterTerminal.Shell.Services
             workspace.CursorShape = _settings.CursorShapeName;
             workspace.BlinkCursor = _settings.BlinkCursor;
             workspace.SplitUsesActiveProfile = _settings.SplitUsesActiveProfile;
+            workspace.DetectLinks = _settings.DetectLinks;
+            workspace.LinkActivation = _settings.LinkActivation.ToString();
+            workspace.LinkSchemes = _settings.LinkSchemes;
+            workspace.ConfirmLinks = _settings.ConfirmLinks;
             CapturePlacement(workspace);
             workspace.Tabs = new List<PersistedTab>();
 
@@ -774,6 +788,11 @@ namespace BetterTerminal.Shell.Services
                 _model.StatusMessage = e.Message;
             };
 
+            surface.LinkReported += delegate(object sender, TerminalLinkMessageEventArgs e)
+            {
+                _model.StatusMessage = e.Message;
+            };
+
             // The font and the colours only reach a renderer that exists, and the renderer is
             // built when the surface loads, so the settings are pushed again from there.
             surface.Loaded += delegate { ApplySettingsTo(pane); };
@@ -1399,6 +1418,7 @@ namespace BetterTerminal.Shell.Services
                 Command("Workspace setup", "Application", "\uE8B7", "", OpenWorkspaceSetup),
                 Command("Files", "Application", "\uE8DA", "", OpenFiles),
                 Command("About BetterTerminal", "Application", "\uE946", "", OpenAbout),
+                Command("Open a link shown in this pane", "Panes", LinkCommandGlyph, "", OpenLinkPicker),
                 Command("Open workspace folder", "Application", "\uE8E5", "", OpenWorkspaceFile)
             };
         }
@@ -1453,6 +1473,42 @@ namespace BetterTerminal.Shell.Services
         private void OpenProfilePicker()
         {
             _palette.Show(ProfileCommands());
+        }
+
+        private void OpenLinkPicker()
+        {
+            _palette.Show(LinkCommands());
+        }
+
+        private IEnumerable<CommandItemViewModel> LinkCommands()
+        {
+            List<CommandItemViewModel> commands = new List<CommandItemViewModel>();
+
+            PaneViewModel active = _model.ActivePane;
+            TerminalSurface surface = active == null ? null : active.Surface;
+            IList<TerminalLink> links = surface == null
+                ? new List<TerminalLink>()
+                : surface.VisibleLinks();
+
+            for (int index = 0; index < links.Count; index++)
+            {
+                TerminalLink link = links[index];
+                TerminalSurface pane = surface;
+                commands.Add(Command(
+                    index + 1 + ". " + TerminalLinkPolicy.Elide(link.Uri, 80),
+                    "Links",
+                    LinkCommandGlyph,
+                    string.Empty,
+                    delegate { pane.OpenLink(link); }));
+            }
+
+            if (commands.Count == 0)
+            {
+                commands.Add(Command("No link is on screen in this pane", "Links", LinkCommandGlyph,
+                    string.Empty, delegate { }));
+            }
+
+            return commands;
         }
 
         private IEnumerable<CommandItemViewModel> ProfileCommands()
@@ -1593,6 +1649,8 @@ namespace BetterTerminal.Shell.Services
 
         private void OnSettingsChanged(object sender, EventArgs e)
         {
+            RefreshLinkOptions();
+
             foreach (TabViewModel tab in _model.Tabs)
             {
                 foreach (PaneViewModel pane in Panes(tab.RootPane))
@@ -1626,10 +1684,19 @@ namespace BetterTerminal.Shell.Services
             }
         }
 
+        private void RefreshLinkOptions()
+        {
+            _linkOptions.DetectionEnabled = _settings.DetectLinks;
+            _linkOptions.ConfirmMisleading = _settings.ConfirmLinks;
+            _linkOptions.Activation = _settings.LinkActivation;
+            _linkOptions.SetSchemes(TerminalLinkOptions.ParseSchemes(_settings.LinkSchemes));
+        }
+
         private void ApplySettingsTo(TerminalSurface surface)
         {
             surface.ApplyFont(_settings.SelectedFont, _settings.FontSize);
             surface.ApplyCaret(ShapeFromName(_settings.CursorShapeName), _settings.BlinkCursor);
+            surface.ApplyLinks(_linkOpener, _linkOptions);
 
             SchemeViewModel scheme = _settings.SelectedScheme;
             if (scheme != null)

@@ -13,6 +13,16 @@ with the code, the code wins - then fix it.
 
 ## Current state
 
+**Update 2026-08-15 (1.4.13).** An address printed into a pane is something you can click. A program
+can declare its own links, and the terminal also finds http, https, ftp, file, mailto and bare
+`www.` hosts in plain text. The pointer underlines the whole link, across a wrapped row boundary as
+one link, **Ctrl+Click** opens it, a right click over one offers to open or copy it, and the command
+palette lists every link on screen and opens one by index. Exactly one path opens anything, and it
+checks the address kind against a list at the moment of opening rather than when the link was found.
+A new **Links** page in the settings window holds the four settings, and `BetterTerminal.Tests` is
+the first test project this repository has had. The newest [decision-log](#decision-log) entry has
+the reasoning and what it cost.
+
 **Update 2026-08-12 (1.4.12).** Scrolling in a pane that keeps writing works again:
 the position anchor added in 1.4.10 was overruling the reader in both directions, so a wheel notch
 down ended higher than it started. A downward gesture now suspends the anchor for about half a
@@ -127,6 +137,54 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-15 - An address printed in a pane is something you can click
+
+Released as 1.4.13. Two sources of links, kept apart because they behave differently. A program can
+declare its own with **OSC 8** (`ESC ] 8 ; params ;
+URI` closed by `ESC ] 8 ; ;`, either terminator, `id=` grouping non contiguous runs into one link),
+and the terminal **finds addresses in plain text** (http, https, ftp, file, mailto, and a bare
+`www.` host resolved over https). Where a program declared one, nothing is inferred: the declared
+link wins over the cells it covers.
+
+Five decisions worth keeping.
+
+**The wrap bit rides on the last cell of the row** (`CellFlags.LineWrapped`), not in a table beside
+the lines. Rows move as whole arrays through `ScrollUp`, `InsertLines`, the history and the
+alternate screen, and none of those knew about a per line flag; on the last cell it follows the row
+for free. `ResizeLine` clears it, because this grid truncates and pads instead of reflowing, and a
+stale bit would join two lines that no longer run on.
+
+**The link id is a `ushort` on `TerminalCell`, placed between `Character` and `Flags`** so the struct
+stays at 16 bytes. A million lines of history is the constraint from 1.4.11; an `int` there would
+have cost about 25 percent more for every cell ever written.
+
+**Detection never runs on a frame.** It runs when something asks (the pointer moved, a right click, the
+palette opened) and the answer is cached per logical line in a `ConditionalWeakTable` keyed by the row
+array, checked against the line versions the scan was built from. A row that leaves the history takes
+its cache with it. Rendering a screen with no links does no matching work at all, and scrolling back
+over lines already scanned does none either.
+
+**Exactly one path opens anything**: `TerminalLinkOpener.Open`. Ctrl+Click, the two context menu
+entries and the palette all go through it, and the scheme allowlist is checked there, at the moment of
+opening, not at detection. The address is handed to the shell association through `ProcessStartInfo`
+with `UseShellExecute`; no command line string carrying a URI is built anywhere. A host that is
+punycode or written in another script, and a declared link whose visible text disagrees with its
+target, ask first and show the real target elided in the middle.
+
+**A wide character now takes two cells** (`CellFlags.WideTrailing`, `CharacterWidth`). It had to, for
+a hit test over a double width cell to mean anything, and it also stops a CJK glyph overprinting its
+neighbour. Copying skips the trailing cell so the clipboard is unchanged.
+
+**Open thread:** this terminal still implements no mouse reporting (DECSET 1000, 1002, 1003 are
+parsed and ignored, and no mouse event is ever written to the child), so the rule that a child owning
+the pointer keeps it needed nothing: an unmodified click still only selects. If mouse reporting is
+ever added, revisit the activation test in `TerminalRenderer.ActivationHeld`.
+
+**`BetterTerminal.Tests` now exists** (`beterm-tests.exe`, in the solution, no dependencies, a check
+per line and an exit code): 77 checks over the parser, detection, hit testing and refusal. Run it
+after a build. CLAUDE.md, STRUCTURE.md and WORKFLOWS.md still say the project has no tests, so they
+want an `/md-sync`.
 
 ### 2026-08-12 - Holding position and catching up are opposite requests, and the anchor was winning both
 

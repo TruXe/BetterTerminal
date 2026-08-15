@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using BetterTerminal.Shell.Services;
+using BetterTerminal.Terminal;
 
 namespace BetterTerminal.Shell.ViewModels
 {
@@ -20,6 +21,12 @@ namespace BetterTerminal.Shell.ViewModels
         private bool _blinkCursor = true;
         private bool _splitUsesActiveProfile;
         private bool _showInFolderMenu;
+        private bool _detectLinks = true;
+        private bool _confirmLinks = true;
+        private bool _linkNeedsControl = true;
+        private bool _linkNeedsAlt;
+        private bool _linkNeedsNothing;
+        private string _linkSchemes = string.Join(", ", TerminalLinkOptions.DefaultSchemes().ToArray());
 
         public SettingsViewModel()
         {
@@ -29,6 +36,7 @@ namespace BetterTerminal.Shell.ViewModels
                 new SettingsPageViewModel { Title = "Profiles", Glyph = "\uE756" },
                 new SettingsPageViewModel { Title = "Keyboard", Glyph = "\uE765" },
                 new SettingsPageViewModel { Title = "Panes and tabs", Glyph = "\uEE3F" },
+                new SettingsPageViewModel { Title = "Links", Glyph = "\uE71B" },
                 new SettingsPageViewModel { Title = "Integration", Glyph = "\uE8B7" },
                 new SettingsPageViewModel { Title = "About", Glyph = "\uE946" }
             };
@@ -153,6 +161,76 @@ namespace BetterTerminal.Shell.ViewModels
         public string FolderMenuCommand
         {
             get { return ExplorerMenu.CommandLine(); }
+        }
+
+        public bool DetectLinks
+        {
+            get { return _detectLinks; }
+
+            set
+            {
+                if (Set(ref _detectLinks, value))
+                {
+                    RaiseChanged();
+                }
+            }
+        }
+
+        public bool ConfirmLinks
+        {
+            get { return _confirmLinks; }
+
+            set
+            {
+                if (Set(ref _confirmLinks, value))
+                {
+                    RaiseChanged();
+                }
+            }
+        }
+
+        public bool LinkNeedsControl
+        {
+            get { return _linkNeedsControl; }
+            set { SetLinkActivation(ref _linkNeedsControl, value); }
+        }
+
+        public bool LinkNeedsAlt
+        {
+            get { return _linkNeedsAlt; }
+            set { SetLinkActivation(ref _linkNeedsAlt, value); }
+        }
+
+        public bool LinkNeedsNothing
+        {
+            get { return _linkNeedsNothing; }
+            set { SetLinkActivation(ref _linkNeedsNothing, value); }
+        }
+
+        public string LinkSchemes
+        {
+            get { return _linkSchemes; }
+
+            set
+            {
+                if (Set(ref _linkSchemes, value))
+                {
+                    RaiseChanged();
+                }
+            }
+        }
+
+        public LinkActivation LinkActivation
+        {
+            get
+            {
+                if (_linkNeedsAlt)
+                {
+                    return LinkActivation.Alt;
+                }
+
+                return _linkNeedsNothing ? LinkActivation.None : LinkActivation.Control;
+            }
         }
 
         public ObservableCollection<string> MonoFonts { get; private set; }
@@ -335,6 +413,47 @@ namespace BetterTerminal.Shell.ViewModels
 
                 return _isCursorUnderline ? "Underline" : "Block";
             }
+        }
+
+        public void ApplyStoredLinks(bool? detect, string activation, string schemes, bool? confirm)
+        {
+            _detectLinks = !detect.HasValue || detect.Value;
+            Raise("DetectLinks");
+
+            _confirmLinks = !confirm.HasValue || confirm.Value;
+            Raise("ConfirmLinks");
+
+            _linkNeedsAlt = activation == LinkActivation.Alt.ToString();
+            _linkNeedsNothing = activation == LinkActivation.None.ToString();
+            _linkNeedsControl = !_linkNeedsAlt && !_linkNeedsNothing;
+            Raise("LinkNeedsControl");
+            Raise("LinkNeedsAlt");
+            Raise("LinkNeedsNothing");
+
+            if (!string.IsNullOrWhiteSpace(schemes))
+            {
+                _linkSchemes = schemes;
+                Raise("LinkSchemes");
+            }
+        }
+
+        private void SetLinkActivation(ref bool field, bool value)
+        {
+            if (!value || field)
+            {
+                field = value;
+                return;
+            }
+
+            _linkNeedsControl = false;
+            _linkNeedsAlt = false;
+            _linkNeedsNothing = false;
+            field = true;
+
+            Raise("LinkNeedsControl");
+            Raise("LinkNeedsAlt");
+            Raise("LinkNeedsNothing");
+            RaiseChanged();
         }
 
         private void SetCursorShape(ref bool field, bool value)

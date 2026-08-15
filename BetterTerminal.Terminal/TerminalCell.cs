@@ -6,6 +6,7 @@ namespace BetterTerminal.Terminal
         public int Foreground;
         public int Background;
         public char Character;
+        public ushort LinkId;
         public CellFlags Flags;
 
         public bool SameAttributes(TerminalCell other)

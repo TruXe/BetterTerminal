@@ -40,6 +40,18 @@ namespace BetterTerminal.Shell
         [DataMember(Name = "splitUsesActiveProfile")]
         public bool SplitUsesActiveProfile { get; set; }
 
+        [DataMember(Name = "detectLinks")]
+        public bool? DetectLinks { get; set; }
+
+        [DataMember(Name = "linkActivation")]
+        public string LinkActivation { get; set; }
+
+        [DataMember(Name = "linkSchemes")]
+        public string LinkSchemes { get; set; }
+
+        [DataMember(Name = "confirmLinks")]
+        public bool? ConfirmLinks { get; set; }
+
         [DataMember(Name = "windowLeft")]
         public double WindowLeft { get; set; }
 

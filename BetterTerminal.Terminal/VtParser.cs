@@ -186,6 +186,7 @@ namespace BetterTerminal.Terminal
 
                 case 'c':
                     _grid.ResetAttributes();
+                    _grid.CurrentLinkId = 0;
                     _grid.EraseInDisplay(2);
                     _grid.SetCursor(0, 0);
                     _state = State.Ground;
@@ -275,11 +276,42 @@ namespace BetterTerminal.Terminal
                     {
                         RaiseTitleChanged(payload.Substring(separator + 1));
                     }
+                    else if (command == "8")
+                    {
+                        ApplyHyperlink(payload.Substring(separator + 1));
+                    }
                 }
             }
 
             _stringBuffer.Length = 0;
             _state = State.Ground;
+        }
+
+        private void ApplyHyperlink(string body)
+        {
+            int separator = body.IndexOf(';');
+            if (separator < 0)
+            {
+                return;
+            }
+
+            string uri = body.Substring(separator + 1).Trim();
+            _grid.CurrentLinkId = uri.Length == 0
+                ? (ushort)0
+                : _grid.Links.Open(uri, GroupKey(body.Substring(0, separator)));
+        }
+
+        private static string GroupKey(string parameters)
+        {
+            foreach (string entry in parameters.Split(':'))
+            {
+                if (entry.StartsWith("id=", StringComparison.Ordinal))
+                {
+                    return entry.Substring(3);
+                }
+            }
+
+            return null;
         }
 
         private void Dispatch(char final)

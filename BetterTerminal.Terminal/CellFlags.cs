@@ -11,6 +11,8 @@ namespace BetterTerminal.Terminal
         Italic = 4,
         Underline = 8,
         Inverse = 16,
-        Hidden = 32
+        Hidden = 32,
+        LineWrapped = 64,
+        WideTrailing = 128
     }
 }
