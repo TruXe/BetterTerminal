@@ -1,5 +1,5 @@
 ﻿---
-updated: 2026-08-08
+updated: 2026-08-16
 scope: Why BetterTerminal is built the way it is - decisions, unfinished threads, dead ends and vocabulary, for a reader returning cold.
 stability: evolving
 sources: [session context packet 2026-08-04, source under D:\Multi TerminĂˇl Window after the design import, docs/_archive/2026-08-04/, tools/*.ps1, user answers]
@@ -20,8 +20,9 @@ one link, **Ctrl+Click** opens it, a right click over one offers to open or copy
 palette lists every link on screen and opens one by index. Exactly one path opens anything, and it
 checks the address kind against a list at the moment of opening rather than when the link was found.
 A new **Links** page in the settings window holds the four settings, and `BetterTerminal.Tests` is
-the first test project this repository has had. The newest [decision-log](#decision-log) entry has
-the reasoning and what it cost.
+the first test project this repository has had. Its [decision-log](#decision-log) entry of 2026-08-15
+has the reasoning and what it cost. **Published on 2026-08-16** as release `v1.4.13`; it had been
+sitting unpushed and untagged until then, which the newest entry explains.
 
 **Update 2026-08-12 (1.4.12).** Scrolling in a pane that keeps writing works again:
 the position anchor added in 1.4.10 was overruling the reader in both directions, so a wheel notch
@@ -137,6 +138,30 @@ open threads below.
 
 Append-only, newest first. Entries below 2026-08-05 are dated 2026-08-04; order within that day is
 reconstructed.
+
+### 2026-08-16 - 1.4.13 was written but not published, and the tag is the only thing that ships it
+
+The 1.4.13 work was committed on 2026-08-15 and then stayed on this machine. `main` sat **one commit
+ahead of `origin/main`** and there was **no `v1.4.13` tag** - the newest was `v1.4.12` - so not one
+run had ever fired. `VersionInfo.cs` and `Bootstrap.rc` both read 1.4.13 and agreed with each other,
+which is exactly what makes this easy to miss: everything local says the version exists.
+
+Published on the user's explicit go-ahead, in the shape v1.4.11 and v1.4.12 already used - the
+annotated tag sits on the `release:` commit itself: `git push origin main` (`9da1a49..26813e9`),
+`git tag -a v1.4.13 -m "BetterTerminal 1.4.13"`, `git push origin v1.4.13`.
+
+**Both runs finished success** - the `main` push build and the tag build (run 31934694069). The tag
+run is the one that publishes, and it produced release **`v1.4.13`**, `prerelease=false`,
+`draft=false`, marked latest, carrying the one asset `BetterTerminal.exe` at 0.62 MB. That is
+[RULES #git-rules](RULES.md#git-rules) satisfied in fact rather than in intent.
+
+**Worth keeping.** The version in `VersionInfo.cs` and the version on the releases page are two
+different claims, and only a pushed `v*` tag joins them: `.github/workflows/build.yml` publishes for
+`refs/tags/v*` and for nothing else, so a `release:` commit on its own ships nothing. It costs more
+here than it would in most repositories, because the self-update path reads the **latest release** -
+an unpublished version is not slow to reach people, it never reaches anyone at all, and the copy
+under `%LOCALAPPDATA%` goes on believing it is current. Cheap check before believing a version
+shipped: `git status -sb` and `git tag --sort=-v:refname | head -1`, read against `VersionInfo.cs`.
 
 ### 2026-08-15 - An address printed in a pane is something you can click
 
